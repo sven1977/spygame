@@ -136,6 +136,7 @@ class Level(Screen, metaclass=ABCMeta):
         from spygame.physics.collision_algorithms import AABBCollision
         from spygame.physics.physics_component import PhysicsComponent
         from spygame.sprites.tile_sprite import TileSprite
+
         defaults(
             stage.options,
             {
@@ -157,6 +158,7 @@ class Level(Screen, metaclass=ABCMeta):
         """
         from spygame.physics.physics_component import PhysicsComponent
         from spygame.sprites.tile_sprite import TileSprite
+
         Stage.stage_screen(
             self,
             None,

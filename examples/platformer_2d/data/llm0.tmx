@@ -2958,7 +2958,7 @@
  <objectgroup name="objects">
   <object id="1" name="erik" type="spygame.examples.vikings.Erik" gid="3004" x="22" y="39" width="32" height="32"/>
   <object id="2" name="olaf" type="spygame.examples.vikings.Olaf" gid="3166" x="55" y="40" width="32" height="32"/>
-  <object id="4" name="repeater" type="spygame.Repeater" gid="1447" x="0" y="16" width="16" height="16">
+  <object id="4" name="repeater" type="spygame.sprites.repeater.Repeater" gid="1447" x="0" y="16" width="16" height="16">
    <properties>
     <property name="img" value="world2"/>
    </properties>

@@ -1,9 +1,13 @@
 import pygame
 import pytmx
 
-from spygame import DEBUG_FLAGS, DEBUG_RENDER_SPRITES_AFTER_EACH_TICK, \
-    DEBUG_RENDER_SPRITES_BEFORE_EACH_TICK, DEBUG_RENDER_SPRITES_RECTS, \
-    DEBUG_RENDER_SPRITES_RECTS_COLOR
+from spygame import (
+    DEBUG_FLAGS,
+    DEBUG_RENDER_SPRITES_AFTER_EACH_TICK,
+    DEBUG_RENDER_SPRITES_BEFORE_EACH_TICK,
+    DEBUG_RENDER_SPRITES_RECTS,
+    DEBUG_RENDER_SPRITES_RECTS_COLOR,
+)
 from spygame.game_loop import GameLoop
 from spygame.game_object import GameObject
 from spygame.physics.collision_algorithms import AABBCollision
@@ -171,6 +175,7 @@ class Stage(GameObject):
         self.sprites = []  # a plain list of all Sprites in this Stage
 
         from spygame.sprites.sprite import Sprite
+
         # Used to do test collisions on a Stage.
         self.locate_obj = Sprite(0, 0, width_height=(0, 0))
 
@@ -353,6 +358,7 @@ class Stage(GameObject):
                 pytmx_layer.name
             )
             from spygame.tmx.tiled_object_group import TiledObjectGroup
+
             l = TiledObjectGroup(pytmx_layer, pytmx_tiled_map)
             self.add_tiled_object_group(l)
 
@@ -368,6 +374,7 @@ class Stage(GameObject):
             ), "ERROR: a TiledTileLayer needs a tile_sprite_handler callable to generate all TileSprite objects in the layer!"
 
             from spygame.tmx.tiled_tile_layer import TiledTileLayer
+
             l = TiledTileLayer(
                 pytmx_layer, pytmx_tiled_map, self.options["tile_sprite_handler"]
             )

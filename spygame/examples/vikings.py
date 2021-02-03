@@ -19,7 +19,9 @@ import functools
 
 from spygame.components.animation import Animation
 from spygame.components.brains import AIBrain, HumanPlayerBrain
-from spygame.keyboard_inputs import KeyboardBrainTranslation
+from spygame.components.viewport import Viewport
+from spygame.game_loop import GameLoop
+from spygame.keyboard_inputs import KeyboardCommandTranslation
 from spygame.physics.physics_component import PhysicsComponent
 from spygame.physics.platformer_physics import PlatformerPhysics
 from spygame.screens import Level
@@ -28,6 +30,7 @@ from spygame.sprites.sprite import Sprite
 from spygame.sprites.sprite_sheet import SpriteSheet
 from spygame.sprites.tile_sprite import SlopedTileSprite, TileSprite
 from spygame.stage import Stage
+from spygame.state import State
 from spygame.tmx.autobuild import Autobuild
 
 
@@ -62,15 +65,15 @@ class Viking(AnimatedSprite, metaclass=ABCMeta):
         """
         :param int x: the start x position
         :param int y: the start y position
-        :param spyg.SpriteSheet spritesheet: the SpriteSheet object (tsx file) to use for this Viking
-        :param dict animation_setup: a dictionary to be passed to spyg.Animation.register_settings and
+        :param SpriteSheet spritesheet: the SpriteSheet object (tsx file) to use for this Viking
+        :param dict animation_setup: a dictionary to be passed to Animation.register_settings and
                 stored under the SpriteSheet.name in the animations registry
-        :param spyg.HumanPlayerBrain brain: a custom spyg.HumanPlayerBrain to use for this Viking
+        :param HumanPlayerBrain brain: a custom HumanPlayerBrain to use for this Viking
         """
         super().__init__(x, y, spritesheet, animation_setup, width_height=(24, 32))
 
-        self.type = spyg.Sprite.get_type("friendly")
-        self.collision_mask |= spyg.Sprite.get_type("default,one_way_platform,particle")
+        self.type = Sprite.get_type("friendly")
+        self.collision_mask |= Sprite.get_type("default,one_way_platform,particle")
 
         self.life_points = 3
         self.ladder_frame = 0
@@ -337,9 +340,7 @@ class Viking(AnimatedSprite, metaclass=ABCMeta):
         anim_setup = Animation.get_settings(
             self.spritesheet.name, self.cmp_animation.animation
         )
-        if anim_setup and not (
-            anim_setup["flags"] & Animation.get_flag("block_stand")
-        ):
+        if anim_setup and not (anim_setup["flags"] & Animation.get_flag("block_stand")):
             # TODO: fix this depedency on knowing that some children will be defining `which_stand` method
             self.play_animation(
                 self.which_stand() if hasattr(self, "which_stand") else "stand"
@@ -498,16 +499,16 @@ class Baleog(Viking):
                 (
                     "space",
                     "swing_sword",
-                    KeyboardBrainTranslation.DOWN_ONE_TICK
-                    | KeyboardBrainTranslation.BLOCK_REPEAT_UNTIL_ANIM_COMPLETE,
+                    KeyboardCommandTranslation.DOWN_ONE_TICK
+                    | KeyboardCommandTranslation.BLOCK_REPEAT_UNTIL_ANIM_COMPLETE,
                     None,
                     {"swing_sword1", "swing_sword2"},
                 ),  # sword
                 (
                     "d",
                     "draw_bow",
-                    KeyboardBrainTranslation.UP_ONE_TICK
-                    | KeyboardBrainTranslation.BLOCK_OTHER_CMD_UNTIL_ANIM_COMPLETE,
+                    KeyboardCommandTranslation.UP_ONE_TICK
+                    | KeyboardCommandTranslation.BLOCK_OTHER_CMD_UNTIL_ANIM_COMPLETE,
                     "release_bow",
                     "draw_bow",
                 ),  # bow (anim draw_bow has to be complete)
@@ -810,7 +811,7 @@ class Olaf(Viking):
                 (
                     "space",
                     "switch_shield",
-                    KeyboardBrainTranslation.DOWN_ONE_TICK,
+                    KeyboardCommandTranslation.DOWN_ONE_TICK,
                 ),  # shield up/down
                 # TODO: careful: if two keys write to the same command, the second key will always overwrite the first one
                 # ("d", "switch_shield", KeyboardBrainTranslation.DOWN_ONE_TICK),  # shield up/down
@@ -966,7 +967,7 @@ class VikingLevel(Level):
         )
 
         # play a new GameLoop giving it some options
-        GameLoop.play_a_loop(screen_obj=self, debug_rendering=True)
+        GameLoop.play_a_loop(screen_obj=self)
 
     def done(self):
         Stage.get_stage().stop()
@@ -1293,9 +1294,7 @@ class FireSpitter(Sprite, Autobuild):
             width_height=(self.w_in_tiles * self.tile_w, self.h_in_tiles * self.tile_h),
         )
         # collision types
-        self.type = Sprite.get_type(
-            "default"
-        )  # collide normally (behave like a wall)
+        self.type = Sprite.get_type("default")  # collide normally (behave like a wall)
         self.collision_mask = 0  # do not do any collisions itself
 
         # set some spitter specific things

@@ -68,7 +68,7 @@ class KeyboardInputs(EventObject):
                     self.trigger_event("key_up." + self.descriptions[e.key])
 
 
-class KeyboardBrainTranslation(object):
+class KeyboardCommandTranslation(object):
     """
     A class to represent a relationship between a pressed key and a command (or two commands)
     The normal relationship is: [some key]: when pressed -> [command] is True; when not pressed -> [command] is False

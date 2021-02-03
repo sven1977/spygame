@@ -18,68 +18,85 @@ class GameLoop(object):
     active_loop = None
 
     @staticmethod
-    def play_a_loop(**kwargs):
+    def play_a_loop(
+        *,
+        force_loop=False,
+        screen_obj=None,
+        keyboard_inputs=None,
+        display=None,
+        max_fps=None,
+        game_loop="new",
+        dont_play=False
+    ):
         """
         Factory: plays a given GameLoop object or creates a new one using the given \*\*kwargs options.
 
-        :param any kwargs:
-                - force_loop (bool): whether to play regardless of whether we still have some active loop running
-                - callback (callable): the GameLoop's callback loop function
-                - keyboard_inputs (KeyboardInputs): the GameLoop's KeyboardInputs object
-                - display (Display): the Display object to render everything on
-                - max_fps (int): the max frames per second to loop through
-                - screen_obj (Screen): alternatively, a Screen can be given, from which we will extract `display`, `max_fps` and `keyboard_inputs`
-                - game_loop (Union[str,GameLoop]): the GameLoop to use (instead of creating a new one); "new" or [empty] for new one
-                - dont_play (bool): whether - after creating the GameLoop - it should be played. Can be used for openAI gym purposes, where we just step,
-                  not tick
-        :return: the created/played GameLoop object or None
-        :rtype: Union[GameLoop,None]
+        Args:
+            force_loop (bool): Whether to play regardless of whether we still have some
+                active loop running
+            screen_obj (Screen): alternatively, a Screen can be given, from which we
+                will extract `display`, `max_fps` and `keyboard_inputs`.
+            keyboard_inputs (KeyboardInputs): The GameLoop's KeyboardInputs object.
+            display (Display): The Display object to render everything on.
+            max_fps (int): The max frames per second to loop through.
+            game_loop (Union[str,GameLoop]): The GameLoop to use (instead of creating a
+                new one); "new" or [empty] for new one.
+            dont_play (bool): whether - after creating the GameLoop - it should be
+                played. Can be used for openAI gym purposes, where we just step, not
+                tick.
+
+        Returns:
+            Union[GameLoop,None]: The created/played GameLoop object or None.
         """
 
-        defaults(
-            kwargs,
-            {
-                "force_loop": False,
-                "screen_obj": None,
-                "keyboard_inputs": None,
-                "display": None,
-                "max_fps": None,
-                "game_loop": "new",
-                "dont_play": False,
-            },
-        )
+        # defaults(
+        #    kwargs,
+        #    {
+        #        "force_loop": False,
+        #        "screen_obj": None,
+        #        "keyboard_inputs": None,
+        #        "display": None,
+        #        "max_fps": None,
+        #        "game_loop": "new",
+        #        "dont_play": False,
+        #    },
+        # )
 
         # - if there's no other loop active, run the default stageGameLoop
         # - or: there is an active loop, but we force overwrite it
-        if GameLoop.active_loop is None or kwargs["force_loop"]:
+        if GameLoop.active_loop is None or force_loop:
             # generate a new loop (and play)
-            if kwargs["game_loop"] == "new":
-                keyboard_inputs = None
-                # set keyboard inputs directly
-                if kwargs["keyboard_inputs"]:
-                    keyboard_inputs = kwargs["keyboard_inputs"]
+            if game_loop == "new":
+                # keyboard_inputs = None
+                ## set keyboard inputs directly
+                # if keyboard_inputs:
+                #    keyboard_inputs = keyboard_inputs
                 # or through the screen_obj
-                elif kwargs["screen_obj"]:
-                    keyboard_inputs = kwargs["screen_obj"].keyboard_inputs
+                # max_fps = 60
+                if screen_obj:
+                    assert keyboard_inputs is None
+                    keyboard_inputs = screen_obj.keyboard_inputs
+                    assert display is None
+                    display = screen_obj.display
+                    assert max_fps is None
+                    max_fps = screen_obj.max_fps
 
-                display = None
+                # display = None
                 # set display directly
-                if kwargs["display"]:
-                    display = kwargs["display"]
+                # if display
+                #    display = kwargs["display"]
                 # or through the screen_obj
-                elif kwargs["screen_obj"]:
-                    display = kwargs["screen_obj"].display
+                # if screen_obj:
 
-                max_fps = 60
                 # set max_fps directly
-                if kwargs["max_fps"]:
-                    max_fps = kwargs["max_fps"]
+                # if kwargs["max_fps"]:
+                #    max_fps = kwargs["max_fps"]
                 # or through the screen_obj
-                elif kwargs["screen_obj"]:
-                    max_fps = kwargs["screen_obj"].max_fps
+                # if kwargs["screen_obj"]:
 
                 # Create a new GameLoop object.
                 from spygame.stage import Stage
+
                 loop = GameLoop(
                     Stage.stage_default_game_loop_callback,
                     display=display,
@@ -87,14 +104,14 @@ class GameLoop(object):
                     max_fps=max_fps,
                 )
                 # And play it, if necessary.
-                if not kwargs["dont_play"]:
+                if not dont_play:
                     loop.play()
                 return loop
 
             # Play an already existing loop.
-            elif isinstance(kwargs["game_loop"], GameLoop):
-                kwargs["game_loop"].play()
-                return kwargs["game_loop"]
+            elif isinstance(game_loop, GameLoop):
+                game_loop.play()
+                return game_loop
 
             # do nothing
             return None
@@ -129,12 +146,12 @@ class GameLoop(object):
         """
         Plays this GameLoop (after pausing the currently running GameLoop, if any).
         """
-        # pause the current loop
+        # Pause the current loop.
         if GameLoop.active_loop:
             GameLoop.active_loop.pause()
         GameLoop.active_loop = self
         self.is_paused = False
-        # tick as long as we are not paused
+        # Tick as long as we are not paused.
         while not self.is_paused:
             self.tick(max_fps)
 
@@ -150,22 +167,22 @@ class GameLoop(object):
         if not max_fps:
             max_fps = self.max_fps
 
-        # move the clock and store the dt (since last frame) in sec
+        # Move the clock and store the dt (since last frame) in sec.
         self.dt = self.timer.tick(max_fps) / 1000
 
-        # default global events?
+        # Default global events?
         events = pygame.event.get(pygame.QUIT)  # TODO: add more here?
         for e in events:
             if e.type == pygame.QUIT:
                 raise Exception(SystemExit, "QUIT")
 
-        # collect keyboard events
+        # Collect keyboard events.
         self.keyboard_inputs.tick()
 
-        # call the callback with self (for references to important game parameters)
+        # Call the callback with self (for references to important game parameters).
         self.callback(self)
 
-        # increase global frame counter
+        # Increase global frame counter.
         self.frame += 1
 
     def step(self, action):
@@ -176,17 +193,17 @@ class GameLoop(object):
 
         :param str action: the action to execute on the MDP
         """
-        # default global events?
+        # Default global events?
         events = pygame.event.get(pygame.QUIT)  # TODO: add more here?
         for e in events:
             if e.type == pygame.QUIT:
                 raise (SystemExit, "QUIT")
 
-        # collect keyboard events
+        # Collect keyboard events.
         self.keyboard_inputs.tick()
 
-        # call the callback with self (for references to important game parameters)
+        # Call the callback with self (for references to important game parameters).
         self.callback(self)
 
-        # increase global frame counter
+        # Increase global frame counter.
         self.frame += 1

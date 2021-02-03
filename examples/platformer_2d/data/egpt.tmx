@@ -5510,7 +5510,7 @@
    </properties>
   </object>
   <object id="7" name="olaf" type="spygame.examples.vikings.Olaf" gid="3551" x="141" y="312" width="32" height="32"/>
-  <object id="9" name="repeater" type="spygame.Repeater" gid="1644" x="0" y="16" width="16" height="16">
+  <object id="9" name="repeater" type="spygame.sprites.repeater.Repeater" gid="1644" x="0" y="16" width="16" height="16">
    <properties>
     <property name="img" value="world3"/>
     <property name="render_order" type="int" value="0"/>

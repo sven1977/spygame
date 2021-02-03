@@ -1,4 +1,7 @@
+import math
+
 from spygame.components.component import Component
+from spygame.stage import Stage
 
 
 class Viewport(Component):

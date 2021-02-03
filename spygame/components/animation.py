@@ -1,4 +1,9 @@
+from itertools import chain
+
 from spygame.components.component import Component
+from spygame.event_object import EventObject
+from spygame.sprites.sprite import Sprite
+from spygame.utils import defaults
 
 
 class Animation(Component):

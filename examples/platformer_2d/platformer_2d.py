@@ -14,8 +14,8 @@
  -------------------------------------------------------------------------
 """
 
-import spygame as spyg
 import spygame.examples.vikings as vik
+from spygame.game import Game
 
 
 # main program
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     level = "WRBC"  # make this match your tmx file (tmx-file's name in all upper case and without the .tmx extension)
 
     # create a spyg.Game object
-    game = spyg.Game(
+    game = Game(
         screens_and_levels=[
             # a level definition
             {

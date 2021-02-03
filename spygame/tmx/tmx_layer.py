@@ -17,7 +17,7 @@ class TmxLayer(object, metaclass=ABCMeta):
         self.pytmx_tiled_map = tmx_tiled_map
         self.name = tmx_layer_obj.name
         properties = tmx_layer_obj.properties
-        defaults(properties, {"do_render": "true", "render_order": 0})
+        defaults(properties, {"do_render": True, "render_order": 0})
         self.properties = properties
 
     @abstractmethod

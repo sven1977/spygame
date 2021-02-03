@@ -463,7 +463,7 @@
     <property name="min_pos" type="int" value="33"/>
    </properties>
   </object>
-  <object id="8" name="repeater" type="spygame.Repeater" gid="2" x="0" y="16" width="16" height="16">
+  <object id="8" name="repeater" type="spygame.sprites.repeater.Repeater" gid="2" x="0" y="16" width="16" height="16">
    <properties>
     <property name="img" value="world3"/>
     <property name="vx" type="float" value="0.7"/>

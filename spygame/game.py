@@ -3,6 +3,7 @@ import pygame
 from spygame import DEBUG_NONE
 from spygame.display import Display
 from spygame.screens import Screen, Level
+from spygame.stage import Stage
 
 
 class Game(object):

@@ -1,10 +1,10 @@
 from abc import ABCMeta, abstractmethod
 
-from spygame.game_loop import GameLoop
 from spygame.components.animation import Animation
 from spygame.components.component import Component
+from spygame.game_loop import GameLoop
+from spygame.keyboard_inputs import KeyboardCommandTranslation
 from spygame.sprites.sprite import Sprite
-
 
 
 class Brain(Component, metaclass=ABCMeta):
@@ -156,16 +156,18 @@ class HumanPlayerBrain(AnimationLinkedBrain):
         # str: key = command
         elif isinstance(key_brain_translations, str):
             self.add_translations(
-                KeyboardBrainTranslation(key_brain_translations, key_brain_translations)
+                KeyboardCommandTranslation(
+                    key_brain_translations, key_brain_translations
+                )
             )
         # tuple: pass as positional args into c'tor (key,cmd,flags,other_cmd,anim_to_be_completed)
         elif isinstance(key_brain_translations, tuple):
-            self.add_translations(KeyboardBrainTranslation(*key_brain_translations))
+            self.add_translations(KeyboardCommandTranslation(*key_brain_translations))
         # dict: pass as kwargs into c'tor
         elif isinstance(key_brain_translations, dict):
-            self.add_translations(KeyboardBrainTranslation(**key_brain_translations))
+            self.add_translations(KeyboardCommandTranslation(**key_brain_translations))
         # KeyboardBrainTranslation: take as is and store
-        elif isinstance(key_brain_translations, KeyboardBrainTranslation):
+        elif isinstance(key_brain_translations, KeyboardCommandTranslation):
             assert (
                 key_brain_translations.key not in self.key_brain_translations
             ), "ERROR: key {} already in key_brain_translations dict!".format(
@@ -390,6 +392,7 @@ class AIBrain(AnimationLinkedBrain):
             Sprite.get_type("default"),
         )
         from spygame.examples.liquid_body import LiquidBody
+
         if not col or isinstance(col.sprite2, LiquidBody):
             return True
         return False

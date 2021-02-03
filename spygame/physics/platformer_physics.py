@@ -1,8 +1,12 @@
 import math
 
+from spygame import DEBUG_FLAGS, DEBUG_RENDER_SPRITES_BEFORE_COLLISION_DETECTION
 from spygame.components.dockable import Dockable
+from spygame.examples.liquid_body import LiquidBody
+from spygame.physics.collision_algorithms import AABBCollision
 from spygame.physics.physics_component import ControlledPhysicsComponent
 from spygame.sprites.sprite import Sprite
+from spygame.sprites.tile_sprite import SlopedTileSprite, TileSprite
 
 
 class PlatformerPhysics(ControlledPhysicsComponent):
@@ -92,9 +96,9 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         self.touched_ladder = None  # holds the ladder Sprite, if player is currently touching a Ladder (not locked in!), otherwise: None
         self.climb_frame_value = 0  # int([climb_frame_value]) determines the frame to use to display climbing position
 
-        self.game_obj_cmp_dockable = (
-            None
-        )  # type: Dockable; the GameObject's Dockable component (that we will add to the GameObject ourselves)
+        # The GameObject's Dockable component (that we will add to the GameObject
+        # ourselves).
+        self.game_obj_cmp_dockable = None  # type: Dockable
 
     def added(self):
         super().added()

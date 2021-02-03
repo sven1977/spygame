@@ -9,6 +9,10 @@
 
 import pygame
 
+from spygame.game_loop import GameLoop
+from spygame.game_object import GameObject
+
+
 VERSION_ = "0.2"
 RELEASE_ = "0.2a0"
 

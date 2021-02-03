@@ -1,7 +1,6 @@
 import math
 
-from spygame import DEBUG_FLAGS, \
-    DEBUG_RENDER_SPRITES_BEFORE_COLLISION_DETECTION
+from spygame import DEBUG_FLAGS, DEBUG_RENDER_SPRITES_BEFORE_COLLISION_DETECTION
 from spygame.physics.collision_algorithms import AABBCollision
 from spygame.physics.physics_component import ControlledPhysicsComponent
 from spygame.sprites.sprite import Sprite

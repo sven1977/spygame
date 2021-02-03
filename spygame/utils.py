@@ -1,3 +1,4 @@
+import importlib
 import re
 import sys
 
@@ -37,7 +38,15 @@ def convert_type(value, force_class=False):
             _, module_, class_ = match_obj.groups(
                 default="__main__"
             )  # if no module given, assume a class defined in __main__
-            ctor = getattr(sys.modules[module_], class_, None)
+
+            # module_name, function_name = type_.rsplit(".", 1)
+            # try:
+            module = importlib.import_module(module_)
+            ctor = getattr(module, class_, None)
+            # except (ModuleNotFoundError, ImportError):
+            #    pass
+
+            # ctor = getattr(sys.modules[module_], class_, None)
             assert isinstance(
                 ctor, type
             ), "ERROR: the string {}.{} does not resolve into a defined class!".format(

@@ -38,7 +38,7 @@ class TiledTileLayer(TmxLayer):
 
         # update do_render indicator depending on some debug settings
         self.do_render = (
-            self.properties["do_render"] == "true"
+            self.properties["do_render"] is True
             and not (DEBUG_FLAGS & DEBUG_DONT_RENDER_TILED_TILE_LAYERS)
         ) or (
             self.type != Sprite.get_type("none")

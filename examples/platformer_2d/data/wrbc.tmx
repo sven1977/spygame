@@ -6948,7 +6948,7 @@
     <property name="color" value="white"/>
    </properties>
   </object>
-  <object id="29" name="rep" type="spygame.Repeater" gid="1908" x="0" y="16" width="16" height="16">
+  <object id="29" name="rep" type="spygame.sprites.repeater.Repeater" gid="1908" x="0" y="16" width="16" height="16">
    <properties>
     <property name="img" value="world1"/>
    </properties>
