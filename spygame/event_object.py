@@ -6,10 +6,13 @@ class EventObject(object):
     EventObject can trigger any event by their name.
     If an EventObject wants to trigger an event, this event must have been registered with the EventObject beforehand (will raise exception otherwise).
     """
+
     def __init__(self):
         # - listeners keeps a list of callbacks indexed by event name for quick lookup
         # - a listener is an array of 2 elements: 0=target, 1=callback
-        self.listeners = {}  # keys=event names; values=list of 2 elements (0=target object, 1=callback method)
+        self.listeners = (
+            {}
+        )  # keys=event names; values=list of 2 elements (0=target object, 1=callback method)
         # stores all valid event names; that way, we can check validity of event when subscribers subscribe to some event
         self.valid_events = set()
 
@@ -45,7 +48,11 @@ class EventObject(object):
         """
         # make sure the event is valid (registered)
         if event not in self.valid_events:
-            raise Exception("ERROR: event '{}' not valid in this EventObject ({}); event has not been registered!".format(event, type(self).__name__))
+            raise Exception(
+                "ERROR: event '{}' not valid in this EventObject ({}); event has not been registered!".format(
+                    event, type(self).__name__
+                )
+            )
 
     def on_event(self, event, target=None, callback=None, register=False):
         """

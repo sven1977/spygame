@@ -12,21 +12,36 @@
 # --------------------------------------------------------------
 
 
-import spygame as spyg
 import pygame
 import random
 from abc import ABCMeta, abstractmethod
-
 import functools
-import math
+
+from spygame.components.animation import Animation
+from spygame.components.brains import AIBrain, HumanPlayerBrain
+from spygame.keyboard_inputs import KeyboardBrainTranslation
+from spygame.physics.physics_component import PhysicsComponent
+from spygame.physics.platformer_physics import PlatformerPhysics
+from spygame.screens import Level
+from spygame.sprites.animated_sprite import AnimatedSprite
+from spygame.sprites.sprite import Sprite
+from spygame.sprites.sprite_sheet import SpriteSheet
+from spygame.sprites.tile_sprite import SlopedTileSprite, TileSprite
+from spygame.stage import Stage
+from spygame.tmx.autobuild import Autobuild
 
 
-class KeyLock(spyg.Sprite):
+class KeyLock(Sprite):
     def __init__(self, x, y, color="yellow"):
-        super().__init__(x, y, image_file="images/generic.png", image_section=(2 * 16, 1 * 16, 16, 16))
+        super().__init__(
+            x,
+            y,
+            image_file="images/generic.png",
+            image_section=(2 * 16, 1 * 16, 16, 16),
+        )
         self.color = color
         # make sure we get stored as items-that-we-are-touching-right-now inside some physics component (in order to unlock iff using key and touching )
-        self.type = spyg.Sprite.get_type("touch")
+        self.type = Sprite.get_type("touch")
         # don't collide with anything
         self.collision_mask = 0
         self.render_order = 10
@@ -38,7 +53,7 @@ class KeyLock(spyg.Sprite):
         pass
 
 
-class Viking(spyg.AnimatedSprite, metaclass=ABCMeta):
+class Viking(AnimatedSprite, metaclass=ABCMeta):
     """
     a generic Viking class
     """
@@ -61,7 +76,12 @@ class Viking(spyg.AnimatedSprite, metaclass=ABCMeta):
         self.ladder_frame = 0
         self.ladder_frame_bend = 63  # the frame number in the SpriteSheet where the character just bends down to start climbing
         self.ladder_frame_start_climb = 64  # the frame number in the SpriteSheet where the character is between bending down and climbing
-        self.ladder_frames = [65, 66, 67, 68]  # the frame numbers in the SpriteSheet that describe the climbing movement
+        self.ladder_frames = [
+            65,
+            66,
+            67,
+            68,
+        ]  # the frame numbers in the SpriteSheet that describe the climbing movement
         self.unhealthy_fall_speed = 420
         self.unhealthy_fall_speed_on_slopes = 450  # on slopes, vikings can fall a little harder without hurting themselves
 
@@ -70,26 +90,39 @@ class Viking(spyg.AnimatedSprite, metaclass=ABCMeta):
         # - pre-tick: HumanPlayerBrain (needs animation comp to check e.g., which commands are paralyzed), Physics (movement + collision resolution)
         # - tick: chose animation to play
         # - post-tick: Animation
-        self.register_event("pre_brain", "pre_physics", "post_physics", "collision", "pre_animation", "post_animation")
+        self.register_event(
+            "pre_brain",
+            "pre_physics",
+            "post_physics",
+            "collision",
+            "pre_animation",
+            "post_animation",
+        )
 
         # add our Components
-        self.cmp_brain = self.add_component(spyg.HumanPlayerBrain("brain", ["up", "down", "left", "right"]))  # type: spyg.HumanPlayerBrain
+        self.cmp_brain = self.add_component(
+            HumanPlayerBrain("brain", ["up", "down", "left", "right"])
+        )  # type: HumanPlayerBrain
 
-        phys = spyg.PlatformerPhysics("physics")
+        phys = PlatformerPhysics("physics")
         phys.squeeze_speed = 0.25
-        self.cmp_physics = self.add_component(phys)  # type: spyg.PlatformerPhysics
+        self.cmp_physics = self.add_component(phys)  # type: PlatformerPhysics
 
         # subscribe/register to some events
         self.on_event("bump.bottom", self, "land")
         self.on_event("squeezed.top", self, "get_squeezed")
-        self.on_event("hit.liquid", self, "hit_liquid")  # player stepped into liquid ground
+        self.on_event(
+            "hit.liquid", self, "hit_liquid"
+        )  # player stepped into liquid ground
         self.on_event("hit.particle", self, "hit_particle")  # player hits a particle
         self.on_event("die", register=True)  # some animations trigger 'die' when done
         self.register_event("dead")
 
         # initialize the 'getting bored'-timer
         self.standing_around_since = 0
-        self.next_bored_seq = int(random.random() * 10) + 5  # play the next 'bored'-sequence after this amount of seconds
+        self.next_bored_seq = (
+            int(random.random() * 10) + 5
+        )  # play the next 'bored'-sequence after this amount of seconds
 
     # makes this Viking the currently active player
     def activate(self):
@@ -150,13 +183,18 @@ class Viking(spyg.AnimatedSprite, metaclass=ABCMeta):
 
         # not moving in x direction
         else:
-            if self.cmp_animation.animation == "stand" or self.cmp_animation.animation == "stand_shield_down":
+            if (
+                self.cmp_animation.animation == "stand"
+                or self.cmp_animation.animation == "stand_shield_down"
+            ):
                 self.standing_around_since += dt
             else:
                 self.standing_around_since = 0
 
             # not moving in x-direction, but trying -> push
-            if self.cmp_brain.commands["left"] != self.cmp_brain.commands["right"]:  # xor
+            if (
+                self.cmp_brain.commands["left"] != self.cmp_brain.commands["right"]
+            ):  # xor
                 self.play_animation("push")
             # out of breath from running?
             elif hasattr(self, "check_out_of_breath") and self.check_out_of_breath():
@@ -198,10 +236,14 @@ class Viking(spyg.AnimatedSprite, metaclass=ABCMeta):
         if self.cmp_physics.on_ladder is None:
             # if our animation is still set to climb -> play default animation
             if anim.animation == "climb":
-                self.play_animation(spyg.Animation.get_settings(self.spritesheet.name, "default"))
+                self.play_animation(
+                    Animation.get_settings(self.spritesheet.name, "default")
+                )
             return False
 
-        self.play_animation("climb")  # set to climb (is_manual == True; set frame manually when on ladder)
+        self.play_animation(
+            "climb"
+        )  # set to climb (is_manual == True; set frame manually when on ladder)
 
         # we are almost at the top (last n pixels) -> put end-of-ladder frame
         delta = self.rect.bottom - self.cmp_physics.touched_ladder.rect.top
@@ -216,8 +258,12 @@ class Viking(spyg.AnimatedSprite, metaclass=ABCMeta):
             if self.ladder_frame >= len(self.ladder_frames):
                 self.ladder_frame = 0  # set to smallest valid
             elif self.ladder_frame < 0:
-                self.ladder_frame = len(self.ladder_frames) - 0.001  # set to largest valid
-            anim.frame = self.ladder_frames[int(self.ladder_frame)]  # floor to whole frame number
+                self.ladder_frame = (
+                    len(self.ladder_frames) - 0.001
+                )  # set to largest valid
+            anim.frame = self.ladder_frames[
+                int(self.ladder_frame)
+            ]  # floor to whole frame number
 
         return True
 
@@ -261,7 +307,10 @@ class Viking(spyg.AnimatedSprite, metaclass=ABCMeta):
     # check whether we are in the air
     def check_in_air(self):
         # we are sinking in water/quicksand
-        if self.cmp_animation.animation == "sink_in_quicksand" or self.cmp_animation.animation == "sink_in_water":
+        if (
+            self.cmp_animation.animation == "sink_in_quicksand"
+            or self.cmp_animation.animation == "sink_in_water"
+        ):
             return False
         # falling too fast
         elif self.cmp_physics.vy > self.unhealthy_fall_speed:
@@ -285,65 +334,185 @@ class Viking(spyg.AnimatedSprite, metaclass=ABCMeta):
 
     # check, whether it's ok to play 'stand' animation
     def allow_play_stand(self):
-        anim_setup = spyg.Animation.get_settings(self.spritesheet.name, self.cmp_animation.animation)
-        if anim_setup and not (anim_setup["flags"] & spyg.Animation.get_flag("block_stand")):
+        anim_setup = Animation.get_settings(
+            self.spritesheet.name, self.cmp_animation.animation
+        )
+        if anim_setup and not (
+            anim_setup["flags"] & Animation.get_flag("block_stand")
+        ):
             # TODO: fix this depedency on knowing that some children will be defining `which_stand` method
-            self.play_animation(self.which_stand() if hasattr(self, "which_stand") else "stand")
+            self.play_animation(
+                self.which_stand() if hasattr(self, "which_stand") else "stand"
+            )
 
 
 # define player: Baleog the Fierce
 # TODO make arrow spritesheet part of baleog.tsx
 class Baleog(Viking):
     def __init__(self, x, y):
-        super().__init__(x, y, spyg.SpriteSheet("data/baleog.tsx"), {
-            "default":           "stand",  # the default animation to play
-            "stand":             {"frames": [0], "loop": False, "flags": spyg.Animation.get_flag("block_stand"), "priority": 0},
-            "be_bored1":         {"frames": [1, 2, 2, 1, 1, 3, 4, 3, 4, 5, 6, 5, 6, 7, 8, 7, 8, 3, 4, 3, 4], "rate": 1 / 3, "loop": False, "next": "stand"},
-            "be_bored2":         {"frames": [1, 2, 2, 1, 1, 7, 8, 7, 8, 2, 2, 1, 2, 2, 1], "rate": 1 / 3, "loop": False, "next": "stand"},
-            "climb":             {"flags": spyg.Animation.get_flag("manual")},
-            "run":               {"frames": [9, 10, 11, 12, 13, 14, 15, 16], "rate": 1 / 8},
-            "push":              {"frames": [54, 55, 56, 57], "rate": 1 / 4},
-            "jump":              {"frames": [36, 37], "rate": 1 / 6},
-            "fall":              {"frames":     [38], "loop": False, "flags": spyg.Animation.get_flag("paralyzes"),
-                                  "properties": {"paralyzes_exceptions": {"left", "right", "up"}}},
-            "be_dizzy":          {"frames": [39, 40, 41, 40, 41, 42, 42, 43], "rate": 1 / 3, "loop": False, "next": "stand",
-                                  "flags":  spyg.Animation.get_flag("paralyzes,block_stand")},
-            "get_hurt":          {"frames": [72], "rate": 1 / 2, "next": "stand",
-                                  "flags":  spyg.Animation.get_flag("paralyzes,block_stand")},
-            "get_squeezed":      {"frames": [122, 123, 123, 124, 124, 125, 125], "rate": 1 / 11, "loop": False, "trigger": "die",
-                                  "flags":  spyg.Animation.get_flag("paralyzes,block_stand")},
-            "sink_in_quicksand": {"frames":   [120, 121, 121, 120, 120, 121, 121, 120], "rate": 1 / 2, "loop": False, "trigger": "die",
-                                  "priority": 100,
-                                  "flags":    spyg.Animation.get_flag("paralyzes")},
-            "sink_in_water":     {"frames":   [90, 91, 92, 93, 91, 92, 93], "rate": 1 / 2, "loop": False, "trigger": "die",
-                                  "priority": 100,
-                                  "flags":    spyg.Animation.get_flag("paralyzes")},
-            "burn":              {"frames": [126, 127, 128, 129, 130, 131, 132, 131, 132, 133], "rate": 1 / 4, "loop": False, "trigger": "die",
-                                  "flags":  spyg.Animation.get_flag("paralyzes,block_stand")},
-            # disables control, except for action1 (which is pressed down)
-            "swing_sword1":      {"frames": [18, 19, 20, 21], "rate": 1 / 4, "loop": False, "next": "stand",
-                                  "flags":  spyg.Animation.get_flag("paralyzes")},
-            # disables control, except for action1 (which is pressed down)
-            "swing_sword2":      {"frames": [22, 23, 24, 25], "rate": 1 / 4, "loop": False, "next": "stand",
-                                  "flags":  spyg.Animation.get_flag("paralyzes")},
-            "draw_bow":          {"frames":   [27, 27, 28, 29, 30, 31], "rate": 1 / 5, "loop": False, "next": "hold_bow",
-                                  "priority": 1,
-                                  "flags":    spyg.Animation.get_flag("paralyzes"), "properties": {"paralyzes_exceptions": {"d"}}},
-            "hold_bow":          {"frames": [31], "loop": False, "priority": 2,
-                                  "flags":  spyg.Animation.get_flag("paralyzes"), "properties": {"paralyzes_exceptions": {"d"}},
-                                  },
-            "release_bow":       {"frames":   [33, 32, 33, 32, 33, 32, 0], "rate": 1 / 6, "loop": False, "next": "stand",
-                                  "priority": 3,
-                                  "flags":    spyg.Animation.get_flag("block_stand,paralyzes")},
-        })
+        super().__init__(
+            x,
+            y,
+            SpriteSheet("data/baleog.tsx"),
+            {
+                "default": "stand",  # the default animation to play
+                "stand": {
+                    "frames": [0],
+                    "loop": False,
+                    "flags": Animation.get_flag("block_stand"),
+                    "priority": 0,
+                },
+                "be_bored1": {
+                    "frames": [
+                        1,
+                        2,
+                        2,
+                        1,
+                        1,
+                        3,
+                        4,
+                        3,
+                        4,
+                        5,
+                        6,
+                        5,
+                        6,
+                        7,
+                        8,
+                        7,
+                        8,
+                        3,
+                        4,
+                        3,
+                        4,
+                    ],
+                    "rate": 1 / 3,
+                    "loop": False,
+                    "next": "stand",
+                },
+                "be_bored2": {
+                    "frames": [1, 2, 2, 1, 1, 7, 8, 7, 8, 2, 2, 1, 2, 2, 1],
+                    "rate": 1 / 3,
+                    "loop": False,
+                    "next": "stand",
+                },
+                "climb": {"flags": Animation.get_flag("manual")},
+                "run": {"frames": [9, 10, 11, 12, 13, 14, 15, 16], "rate": 1 / 8},
+                "push": {"frames": [54, 55, 56, 57], "rate": 1 / 4},
+                "jump": {"frames": [36, 37], "rate": 1 / 6},
+                "fall": {
+                    "frames": [38],
+                    "loop": False,
+                    "flags": Animation.get_flag("paralyzes"),
+                    "properties": {"paralyzes_exceptions": {"left", "right", "up"}},
+                },
+                "be_dizzy": {
+                    "frames": [39, 40, 41, 40, 41, 42, 42, 43],
+                    "rate": 1 / 3,
+                    "loop": False,
+                    "next": "stand",
+                    "flags": Animation.get_flag("paralyzes,block_stand"),
+                },
+                "get_hurt": {
+                    "frames": [72],
+                    "rate": 1 / 2,
+                    "next": "stand",
+                    "flags": Animation.get_flag("paralyzes,block_stand"),
+                },
+                "get_squeezed": {
+                    "frames": [122, 123, 123, 124, 124, 125, 125],
+                    "rate": 1 / 11,
+                    "loop": False,
+                    "trigger": "die",
+                    "flags": Animation.get_flag("paralyzes,block_stand"),
+                },
+                "sink_in_quicksand": {
+                    "frames": [120, 121, 121, 120, 120, 121, 121, 120],
+                    "rate": 1 / 2,
+                    "loop": False,
+                    "trigger": "die",
+                    "priority": 100,
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+                "sink_in_water": {
+                    "frames": [90, 91, 92, 93, 91, 92, 93],
+                    "rate": 1 / 2,
+                    "loop": False,
+                    "trigger": "die",
+                    "priority": 100,
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+                "burn": {
+                    "frames": [126, 127, 128, 129, 130, 131, 132, 131, 132, 133],
+                    "rate": 1 / 4,
+                    "loop": False,
+                    "trigger": "die",
+                    "flags": Animation.get_flag("paralyzes,block_stand"),
+                },
+                # disables control, except for action1 (which is pressed down)
+                "swing_sword1": {
+                    "frames": [18, 19, 20, 21],
+                    "rate": 1 / 4,
+                    "loop": False,
+                    "next": "stand",
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+                # disables control, except for action1 (which is pressed down)
+                "swing_sword2": {
+                    "frames": [22, 23, 24, 25],
+                    "rate": 1 / 4,
+                    "loop": False,
+                    "next": "stand",
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+                "draw_bow": {
+                    "frames": [27, 27, 28, 29, 30, 31],
+                    "rate": 1 / 5,
+                    "loop": False,
+                    "next": "hold_bow",
+                    "priority": 1,
+                    "flags": Animation.get_flag("paralyzes"),
+                    "properties": {"paralyzes_exceptions": {"d"}},
+                },
+                "hold_bow": {
+                    "frames": [31],
+                    "loop": False,
+                    "priority": 2,
+                    "flags": Animation.get_flag("paralyzes"),
+                    "properties": {"paralyzes_exceptions": {"d"}},
+                },
+                "release_bow": {
+                    "frames": [33, 32, 33, 32, 33, 32, 0],
+                    "rate": 1 / 6,
+                    "loop": False,
+                    "next": "stand",
+                    "priority": 3,
+                    "flags": Animation.get_flag("block_stand,paralyzes"),
+                },
+            },
+        )
 
         # add non-standard actions to our Brain
-        self.cmp_brain.add_translations([
-            ("space", "swing_sword", spyg.KeyboardBrainTranslation.DOWN_ONE_TICK | spyg.KeyboardBrainTranslation.BLOCK_REPEAT_UNTIL_ANIM_COMPLETE,
-             None, {"swing_sword1", "swing_sword2"}),  # sword
-            ("d", "draw_bow", spyg.KeyboardBrainTranslation.UP_ONE_TICK | spyg.KeyboardBrainTranslation.BLOCK_OTHER_CMD_UNTIL_ANIM_COMPLETE,
-             "release_bow", "draw_bow"),  # bow (anim draw_bow has to be complete)
-        ])
+        self.cmp_brain.add_translations(
+            [
+                (
+                    "space",
+                    "swing_sword",
+                    KeyboardBrainTranslation.DOWN_ONE_TICK
+                    | KeyboardBrainTranslation.BLOCK_REPEAT_UNTIL_ANIM_COMPLETE,
+                    None,
+                    {"swing_sword1", "swing_sword2"},
+                ),  # sword
+                (
+                    "d",
+                    "draw_bow",
+                    KeyboardBrainTranslation.UP_ONE_TICK
+                    | KeyboardBrainTranslation.BLOCK_OTHER_CMD_UNTIL_ANIM_COMPLETE,
+                    "release_bow",
+                    "draw_bow",
+                ),  # bow (anim draw_bow has to be complete)
+            ]
+        )
 
         # parametrize our physics
         self.components["physics"].can_jump = False
@@ -387,44 +556,101 @@ class Baleog(Viking):
 # define player: Erik the Swift
 class Erik(Viking):
     def __init__(self, x, y):
-        super().__init__(x, y, spyg.SpriteSheet("data/erik.tsx"), {
-            "default":           "stand",  # the default animation to play
-            "stand":             {"frames": [0], "loop": False, "flags": spyg.Animation.get_flag("block_stand")},
-            "be_bored1":         {"frames": [1], "rate": 1 / 2, "next": "stand", "flags": spyg.Animation.get_flag("block_stand")},
-            "be_bored2":         {"frames": [61, 2, 3, 4, 3, 4, 3, 4], "rate": 1 / 3, "next": 'stand',
-                                  "flags":  spyg.Animation.get_flag("block_stand")},
-            "climb":             {"flags": spyg.Animation.get_flag("manual")},
-            "run":               {"frames": [5, 6, 7, 8, 9, 10, 11, 12], "rate": 1 / 8},
-            "out_of_breath":     {"frames": [13, 14, 15, 13, 14, 15], "rate": 1 / 4, "next": 'stand',
-                                  "flags":  spyg.Animation.get_flag("block_stand")},
-            "push":              {"frames": [54, 55, 56, 57], "rate": 1 / 4},
-            "jump_up":           {"frames": [16], "loop": False},
-            "jump_peak":         {"frames": [17], "loop": False},
-            "jump_down":         {"frames": [18, 19], "rate": 1 / 3},
-            "fall":              {"frames":     [81], "loop": False, "flags": spyg.Animation.get_flag("paralyzes"),
-                                  "properties": {"paralyzes_exceptions": {"left", "right", "up"}}},
-            "be_dizzy":          {"frames": [36, 37, 38, 39, 40, 38, 39, 40, 41, 42, 43], "rate": 1 / 3, "loop": False, "next": 'stand',
-                                  "flags":  spyg.Animation.get_flag("paralyzes,block_stand")},
-            "get_hurt":          {"frames": [72], "rate": 1 / 2, "next": 'stand',
-                                  "flags":  spyg.Animation.get_flag("paralyzes,block_stand")},
-            "get_squeezed":      {"frames": [126, 127, 127, 128, 128, 129, 129], "rate": 1 / 11, "loop": False, "trigger": "die",
-                                  "flags":  (spyg.Animation.get_flag("paralyzes,block_stand"))},
-            "sink_in_quicksand": {"frames":   [108, 109, 110, 108, 109, 110, 108, 109], "loop": False, "rate": 1 / 2, "trigger": 'die',
-                                  "priority": 100,
-                                  "flags":    spyg.Animation.get_flag("paralyzes")},
-            "sink_in_water":     {"frames":   [90, 91, 92, 93, 91, 92, 93], "loop": False, "rate": 1 / 2, "trigger": 'die',
-                                  "priority": 100,
-                                  "flags":    spyg.Animation.get_flag("paralyzes")},
-            "burn":              {"frames": [117, 118, 119, 120, 121, 122, 123, 124], "rate": 1 / 4, "loop": False, "trigger": 'die',
-                                  "flags":  spyg.Animation.get_flag("paralyzes")},
-        })
+        super().__init__(
+            x,
+            y,
+            SpriteSheet("data/erik.tsx"),
+            {
+                "default": "stand",  # the default animation to play
+                "stand": {
+                    "frames": [0],
+                    "loop": False,
+                    "flags": Animation.get_flag("block_stand"),
+                },
+                "be_bored1": {
+                    "frames": [1],
+                    "rate": 1 / 2,
+                    "next": "stand",
+                    "flags": Animation.get_flag("block_stand"),
+                },
+                "be_bored2": {
+                    "frames": [61, 2, 3, 4, 3, 4, 3, 4],
+                    "rate": 1 / 3,
+                    "next": "stand",
+                    "flags": Animation.get_flag("block_stand"),
+                },
+                "climb": {"flags": Animation.get_flag("manual")},
+                "run": {"frames": [5, 6, 7, 8, 9, 10, 11, 12], "rate": 1 / 8},
+                "out_of_breath": {
+                    "frames": [13, 14, 15, 13, 14, 15],
+                    "rate": 1 / 4,
+                    "next": "stand",
+                    "flags": Animation.get_flag("block_stand"),
+                },
+                "push": {"frames": [54, 55, 56, 57], "rate": 1 / 4},
+                "jump_up": {"frames": [16], "loop": False},
+                "jump_peak": {"frames": [17], "loop": False},
+                "jump_down": {"frames": [18, 19], "rate": 1 / 3},
+                "fall": {
+                    "frames": [81],
+                    "loop": False,
+                    "flags": Animation.get_flag("paralyzes"),
+                    "properties": {"paralyzes_exceptions": {"left", "right", "up"}},
+                },
+                "be_dizzy": {
+                    "frames": [36, 37, 38, 39, 40, 38, 39, 40, 41, 42, 43],
+                    "rate": 1 / 3,
+                    "loop": False,
+                    "next": "stand",
+                    "flags": Animation.get_flag("paralyzes,block_stand"),
+                },
+                "get_hurt": {
+                    "frames": [72],
+                    "rate": 1 / 2,
+                    "next": "stand",
+                    "flags": Animation.get_flag("paralyzes,block_stand"),
+                },
+                "get_squeezed": {
+                    "frames": [126, 127, 127, 128, 128, 129, 129],
+                    "rate": 1 / 11,
+                    "loop": False,
+                    "trigger": "die",
+                    "flags": (Animation.get_flag("paralyzes,block_stand")),
+                },
+                "sink_in_quicksand": {
+                    "frames": [108, 109, 110, 108, 109, 110, 108, 109],
+                    "loop": False,
+                    "rate": 1 / 2,
+                    "trigger": "die",
+                    "priority": 100,
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+                "sink_in_water": {
+                    "frames": [90, 91, 92, 93, 91, 92, 93],
+                    "loop": False,
+                    "rate": 1 / 2,
+                    "trigger": "die",
+                    "priority": 100,
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+                "burn": {
+                    "frames": [117, 118, 119, 120, 121, 122, 123, 124],
+                    "rate": 1 / 4,
+                    "loop": False,
+                    "trigger": "die",
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+            },
+        )
 
         # add non-standard actions to our Brain
-        self.cmp_brain.add_translations([
-            ("space", "jump"),
-            # ("d", "cmd_smash_wall", spyg.KeyboardBrainTranslation.),
-            # TODO: smash walls("d", "smash", ),
-        ])
+        self.cmp_brain.add_translations(
+            [
+                ("space", "jump"),
+                # ("d", "cmd_smash_wall", KeyboardBrainTranslation.),
+                # TODO: smash walls("d", "smash", ),
+            ]
+        )
 
         # edit physics a little
         phys = self.components["physics"]
@@ -435,7 +661,9 @@ class Erik(Viking):
 
         self.ran_fast = False  # flag: if True, play outOfBreath sequence
         self.vx_out_of_breath = 120  # speed after which to play outOfBreath sequence
-        self.vx_smash_wall = 150  # minimum speed at which we can initiate smash sequence with 'D'
+        self.vx_smash_wall = (
+            150  # minimum speed at which we can initiate smash sequence with 'D'
+        )
 
     # Erik has no special actions
     def check_actions(self):
@@ -496,43 +724,98 @@ class Erik(Viking):
 # define player: Olaf the ???
 class Olaf(Viking):
     def __init__(self, x, y):
-        super().__init__(x, y, spyg.SpriteSheet("data/olaf.tsx"), {
-            "default":              "stand_shield_down",  # the default animation to play
-            "stand_shield_down":    {"frames": [0], "loop": False},
-            "stand_shield_up":      {"frames": [14], "loop": False},
-            "be_bored":             {"frames": [1, 2, 3, 2, 3, 2, 3, 4, 4, 3, 1], "rate": 1 / 3, "next": self.which_stand,
-                                     "flags":  spyg.Animation.get_flag("block_stand")},
-            "climb":                {"flags": spyg.Animation.get_flag("manual")},
-            "run_shield_down":      {"frames": [5, 6, 7, 9, 10, 11, 12, 13], "rate": 1 / 8},
-            "run_shield_up":        {"frames": [15, 16, 18, 19, 20, 21, 22, 23], "rate": 1 / 8},
-            "push":                 {"frames": [33, 34, 36, 37], "rate": 1 / 4},
-            "sail_shield_down":     {"frames": [52, 53], "rate": 1 / 6},
-            "sail_shield_up":       {"frames": [24, 25], "rate": 1 / 4},
-            "sail_shield_up_steer": {"frames": [27, 28], "rate": 1 / 4},
-            "fall":                 {"frames":     [54, 54, 90], "rate": 1, "loop": False, "flags": spyg.Animation.get_flag("paralyzes"),
-                                     "properties": {"paralyzes_exceptions": {"left", "right", "up"}}},
-            "be_dizzy":             {"frames": [29, 30, 31, 32], "rate": 1 / 2, "loop": False, "next": self.which_stand,
-                                     "flags":  spyg.Animation.get_flag("paralyzes,block_stand")},
-            "get_hurt":             {"frames": [38], "rate": 1 / 2, "next": self.which_stand,
-                                     "flags":  spyg.Animation.get_flag("paralyzes,block_stand")},
-            "get_squeezed":         {"frames": [117, 118, 118, 119, 119, 120, 120], "rate": 1 / 11, "loop": False, "trigger": "die",
-                                     "flags":  spyg.Animation.get_flag("paralyzes,block_stand")},
-            "sink_in_quicksand":    {"frames":   [102, 103, 102, 103, 102, 103, 102, 103], "loop": False, "rate": 1 / 2, "trigger": "die",
-                                     "priority": 100,
-                                     "flags":    spyg.Animation.get_flag("paralyzes")},
-            "sink_in_water":        {"frames":   [63, 64, 65, 66, 66, 67], "loop": False, "rate": 1 / 2, "trigger": "die",
-                                     "priority": 100,
-                                     "flags":    spyg.Animation.get_flag("paralyzes")},
-            "burn":                 {"frames": [108, 109, 110, 111, 112, 113, 114, 115], "rate": 1 / 4, "loop": False, "trigger": "die",
-                                     "flags":  spyg.Animation.get_flag("paralyzes")},
-        })
+        super().__init__(
+            x,
+            y,
+            SpriteSheet("data/olaf.tsx"),
+            {
+                "default": "stand_shield_down",  # the default animation to play
+                "stand_shield_down": {"frames": [0], "loop": False},
+                "stand_shield_up": {"frames": [14], "loop": False},
+                "be_bored": {
+                    "frames": [1, 2, 3, 2, 3, 2, 3, 4, 4, 3, 1],
+                    "rate": 1 / 3,
+                    "next": self.which_stand,
+                    "flags": Animation.get_flag("block_stand"),
+                },
+                "climb": {"flags": Animation.get_flag("manual")},
+                "run_shield_down": {
+                    "frames": [5, 6, 7, 9, 10, 11, 12, 13],
+                    "rate": 1 / 8,
+                },
+                "run_shield_up": {
+                    "frames": [15, 16, 18, 19, 20, 21, 22, 23],
+                    "rate": 1 / 8,
+                },
+                "push": {"frames": [33, 34, 36, 37], "rate": 1 / 4},
+                "sail_shield_down": {"frames": [52, 53], "rate": 1 / 6},
+                "sail_shield_up": {"frames": [24, 25], "rate": 1 / 4},
+                "sail_shield_up_steer": {"frames": [27, 28], "rate": 1 / 4},
+                "fall": {
+                    "frames": [54, 54, 90],
+                    "rate": 1,
+                    "loop": False,
+                    "flags": Animation.get_flag("paralyzes"),
+                    "properties": {"paralyzes_exceptions": {"left", "right", "up"}},
+                },
+                "be_dizzy": {
+                    "frames": [29, 30, 31, 32],
+                    "rate": 1 / 2,
+                    "loop": False,
+                    "next": self.which_stand,
+                    "flags": Animation.get_flag("paralyzes,block_stand"),
+                },
+                "get_hurt": {
+                    "frames": [38],
+                    "rate": 1 / 2,
+                    "next": self.which_stand,
+                    "flags": Animation.get_flag("paralyzes,block_stand"),
+                },
+                "get_squeezed": {
+                    "frames": [117, 118, 118, 119, 119, 120, 120],
+                    "rate": 1 / 11,
+                    "loop": False,
+                    "trigger": "die",
+                    "flags": Animation.get_flag("paralyzes,block_stand"),
+                },
+                "sink_in_quicksand": {
+                    "frames": [102, 103, 102, 103, 102, 103, 102, 103],
+                    "loop": False,
+                    "rate": 1 / 2,
+                    "trigger": "die",
+                    "priority": 100,
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+                "sink_in_water": {
+                    "frames": [63, 64, 65, 66, 66, 67],
+                    "loop": False,
+                    "rate": 1 / 2,
+                    "trigger": "die",
+                    "priority": 100,
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+                "burn": {
+                    "frames": [108, 109, 110, 111, 112, 113, 114, 115],
+                    "rate": 1 / 4,
+                    "loop": False,
+                    "trigger": "die",
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+            },
+        )
 
         # add non-standard actions to our Brain
-        self.cmp_brain.add_translations([
-            ("space", "switch_shield", spyg.KeyboardBrainTranslation.DOWN_ONE_TICK),  # shield up/down
-            # TODO: careful: if two keys write to the same command, the second key will always overwrite the first one
-            # ("d", "switch_shield", spyg.KeyboardBrainTranslation.DOWN_ONE_TICK),  # shield up/down
-        ])
+        self.cmp_brain.add_translations(
+            [
+                (
+                    "space",
+                    "switch_shield",
+                    KeyboardBrainTranslation.DOWN_ONE_TICK,
+                ),  # shield up/down
+                # TODO: careful: if two keys write to the same command, the second key will always overwrite the first one
+                # ("d", "switch_shield", KeyboardBrainTranslation.DOWN_ONE_TICK),  # shield up/down
+            ]
+        )
 
         phys = self.cmp_physics
         phys.run_acceleration = 100
@@ -552,17 +835,17 @@ class Olaf(Viking):
     def check_switch_shield(self, game_loop):
         # we are getting a switch shield command -> first switch the position of our shield
         if self.cmp_brain.commands["switch_shield"]:
-            self.is_shield_up = (self.is_shield_up is False)  # toggle
+            self.is_shield_up = self.is_shield_up is False  # toggle
             # change our physics properties based on shield state
             # - one-way-feature to Olaf (things can stand on top of him)
             # - fall-speed
             phys = self.cmp_physics
             if self.is_shield_up:
                 phys.max_fall_speed = self.max_fall_speed_shield_up
-                self.type |= spyg.Sprite.get_type("dockable,one_way_platform")
+                self.type |= Sprite.get_type("dockable,one_way_platform")
             else:
                 phys.max_fall_speed = self.max_fall_speed_shield_down
-                self.type &= ~(spyg.Sprite.get_type("dockable,one_way_platform"))
+                self.type &= ~(Sprite.get_type("dockable,one_way_platform"))
                 # undock all our currently docked objects (that are standing on top of us)
                 self.cmp_physics.game_obj_cmp_dockable.undock_all_docked_objects()
 
@@ -576,7 +859,10 @@ class Olaf(Viking):
     # check whether we are in the air
     def check_in_air(self):
         # we are sinking in water/quicksand
-        if self.cmp_animation.animation == "sink_in_quicksand" or self.cmp_animation.animation == "sink_in_water":
+        if (
+            self.cmp_animation.animation == "sink_in_quicksand"
+            or self.cmp_animation.animation == "sink_in_water"
+        ):
             return False
         # falling too fast
         elif self.cmp_physics.vy > self.unhealthy_fall_speed:
@@ -612,16 +898,18 @@ class Olaf(Viking):
             if phys.at_wall:
                 self.play_animation("push")
             else:
-                self.play_animation("run_shield_up" if self.is_shield_up else "run_shield_down")
+                self.play_animation(
+                    "run_shield_up" if self.is_shield_up else "run_shield_down"
+                )
 
 
-class VikingLevel(spyg.Level):
+class VikingLevel(Level):
     def __init__(self, name: str = "test", **kwargs):
         super().__init__(name, **kwargs)
 
         # hook to the Level's Viking objects (defined in the tmx file's TiledObjectGroup)
         self.vikings = []
-        self.state = spyg.State()
+        self.state = State()
         self.state.register_event("changed.active_viking")
 
         self.register_event("mastered", "aborted", "lost", "viking_reached_exit")
@@ -629,10 +917,17 @@ class VikingLevel(spyg.Level):
     def play(self):
         # start level (stage the scene; will overwrite the old 0-stage (=main-stage))
         # - the options-object below will be also stored in [Stage object].options
-        stage = spyg.Stage.stage_screen(self, None, 0, {
-            "tile_sprite_handler": functools.partial(spyg.PhysicsComponent.tile_sprite_handler, spyg.SlopedTileSprite),
-            "components"         : [spyg.Viewport(self.display)]
-        })
+        stage = Stage.stage_screen(
+            self,
+            None,
+            0,
+            {
+                "tile_sprite_handler": functools.partial(
+                    PhysicsComponent.tile_sprite_handler, SlopedTileSprite
+                ),
+                "components": [Viewport(self.display)],
+            },
+        )
 
         # find all Vikings in the Stage and store them for us
         for sprite in stage.sprites:
@@ -647,7 +942,9 @@ class VikingLevel(spyg.Level):
         self.state.set("vikings", self.vikings)
         self.state.on_event("changed.active_viking", self, "active_viking_changed")
 
-        self.state.set("active_viking", 0, True)  # 0=set to first Viking, True=trigger event
+        self.state.set(
+            "active_viking", 0, True
+        )  # 0=set to first Viking, True=trigger event
         # tell the Viewport of the Stage to follow the active Viking
         stage.follow_object_with_viewport(self.vikings[0])
 
@@ -657,16 +954,22 @@ class VikingLevel(spyg.Level):
         self.on_event("viking_reached_exit")
 
         # activate Ctrl switch vikings
-        self.keyboard_inputs.on_event("key_down.rctrl", self, "next_active_viking", register=True)
-        self.keyboard_inputs.on_event("key_down.lctrl", self, "next_active_viking", register=True)
+        self.keyboard_inputs.on_event(
+            "key_down.rctrl", self, "next_active_viking", register=True
+        )
+        self.keyboard_inputs.on_event(
+            "key_down.lctrl", self, "next_active_viking", register=True
+        )
         # activate stage's escape menu
-        self.keyboard_inputs.on_event("key_down.escape", self, "escape_menu", register=True)
+        self.keyboard_inputs.on_event(
+            "key_down.escape", self, "escape_menu", register=True
+        )
 
         # play a new GameLoop giving it some options
-        spyg.GameLoop.play_a_loop(screen_obj=self, debug_rendering=True)
+        GameLoop.play_a_loop(screen_obj=self, debug_rendering=True)
 
     def done(self):
-        spyg.Stage.get_stage().stop()
+        Stage.get_stage().stop()
         self.state.set("active_viking", None, True)
         # switch off keyboard
         self.keyboard_inputs.update_keys()  # empty list -> no more keys
@@ -676,7 +979,7 @@ class VikingLevel(spyg.Level):
 
         # TODO: UI
         """def scene_func(stage):
-            spyg.Stage.get_stage().pause()
+            Stage.get_stage().pause()
             box = stage.add_sprite(new Q.UI.Container({
 
                 x: Q.width/2,
@@ -696,7 +999,7 @@ class VikingLevel(spyg.Level):
                 ), box);
             box.fit(20);
 
-        spyg.Stage.stage_scene(spyg.Scene(scene_func), 1, { "screen_obj": self })
+        Stage.stage_scene(Scene(scene_func), 1, { "screen_obj": self })
         """
 
     # handles a dead character
@@ -720,7 +1023,9 @@ class VikingLevel(spyg.Level):
                 elif i == active:
                     # was the last one in list, make first one the active guy
                     if i == len(vikings):
-                        self.state.dec("active_viking", 1)  # decrement by one: will now point to last viking in list ...
+                        self.state.dec(
+                            "active_viking", 1
+                        )  # decrement by one: will now point to last viking in list ...
                         self.next_active_viking()  # ... will move pointer to first element in list
 
                     # leave active pointer where it is and call _activeCharacterChanged
@@ -759,7 +1064,7 @@ class VikingLevel(spyg.Level):
         # TODO if typeof slot == 'undefined':
         #    return -1
         vikings = self.state.get("vikings")
-        next_ = ((slot + 1) % len(vikings))
+        next_ = (slot + 1) % len(vikings)
         self.state.set("active_viking", next_, True)
         return next_
 
@@ -776,7 +1081,7 @@ class VikingLevel(spyg.Level):
                     vikings[i].activate()
 
             # make the Stage follow the new Viking
-            stage = spyg.Stage.get_stage(0)  # default stage
+            stage = Stage.get_stage(0)  # default stage
             stage.follow_object_with_viewport(vikings[new_viking_idx], max_speed=2)
             # make the new Viking blink for a while
             vikings[new_viking_idx].blink_animation(15, 1.5)  # 15/s for 1.5s
@@ -786,28 +1091,35 @@ class VikingLevel(spyg.Level):
                 viking.deactivate()
 
 
-class Shot(spyg.AnimatedSprite):
+class Shot(AnimatedSprite):
     """
     a shot (like the one a scorpion shoots)
     - can be extended to do more complicated stuff
     """
 
-    def __init__(self, offset_x, offset_y, spritesheet, animation_setup, shooter, **kwargs):
+    def __init__(
+        self, offset_x, offset_y, spritesheet, animation_setup, shooter, **kwargs
+    ):
         """
         a generic Shot object being spawned into the game usually by a Shooter object
         :param int offset_x: the x-offset with respect to the Shooter's x position
         :param int offset_y: the y-offset with respect to the Shooter's y position
-        :param spyg.SpriteSheet spritesheet:
+        :param SpriteSheet spritesheet:
         :param dict animation_setup: the animation_setup dictionary that will be sent to the Animation component
-        :param spyg.Sprite shooter: the Shooter's (Sprite) object
+        :param Sprite shooter: the Shooter's (Sprite) object
         """
         self.offset_x = offset_x
         self.offset_y = offset_y
         self.shooter = shooter
         self.flip = self.shooter.flip  # flip particle depending on shooter's flip
 
-        super().__init__(self.shooter.rect.x + self.offset_x * (-1 if self.flip["x"] else 1), self.shooter.rect.y + self.offset_y,
-                         spritesheet, animation_setup, **kwargs)
+        super().__init__(
+            self.shooter.rect.x + self.offset_x * (-1 if self.flip["x"] else 1),
+            self.shooter.rect.y + self.offset_y,
+            spritesheet,
+            animation_setup,
+            **kwargs
+        )
 
         # some simple physics
         self.ax = 0
@@ -817,11 +1129,11 @@ class Shot(spyg.AnimatedSprite):
         self.damage = 1
         self.hit_something = False
 
-        self.type = spyg.Sprite.get_type("particle")
-        self.collision_mask = spyg.Sprite.get_type("default,friendly")
+        self.type = Sprite.get_type("particle")
+        self.collision_mask = Sprite.get_type("default,friendly")
 
         self.frame = 0
-        self.vx = -self.vx if self.flip == 'x' else self.vx
+        self.vx = -self.vx if self.flip == "x" else self.vx
 
         self.on_event("collision", register=True)
         self.on_event("collision_done", register=True)
@@ -830,7 +1142,7 @@ class Shot(spyg.AnimatedSprite):
         """
         simple tick function with ax and ay, speed- and pos-recalc, and collision detection
 
-        :param spyg.GameLoop game_loop: the spyg.GameLoop object currently playing
+        :param GameLoop game_loop: the GameLoop object currently playing
         """
         dt = game_loop.dt
         self.vx += self.ax * dt * (-1 if self.flip == "x" else 1)
@@ -845,7 +1157,7 @@ class Shot(spyg.AnimatedSprite):
         """
         we hit something -> solves a collision with another object
 
-        :param spyg.Collision col: the spyg.Collision object to solve
+        :param Collision col: the Collision object to solve
         """
         # we hit our own shooter -> ignore
         if col.sprite2 is self.shooter:
@@ -853,7 +1165,9 @@ class Shot(spyg.AnimatedSprite):
 
         # solve the collision
         self.move(col.separate[0], col.separate[1])
-        col.separate[0] = col.separate[1] = 0.0  # we already solved this collision -> set everything to 0.0
+        col.separate[0] = col.separate[
+            1
+        ] = 0.0  # we already solved this collision -> set everything to 0.0
 
         self.hit_something = True
         # stop abruptly
@@ -862,7 +1176,7 @@ class Shot(spyg.AnimatedSprite):
         self.ay = 0
         self.vy = 0
         # play 'hit' if exists, otherwise just destroy object
-        if "hit" in spyg.Animation.animation_settings[self.spritesheet.name]:
+        if "hit" in Animation.animation_settings[self.spritesheet.name]:
             self.play_animation("hit")
         else:
             self.collision_done()
@@ -878,6 +1192,7 @@ class Arrow(Shot):
     """
     arrow class
     """
+
     sprite_sheet = None
 
     def __init__(self, shooter):
@@ -886,15 +1201,24 @@ class Arrow(Shot):
         """
         # init our recyclable SpriteSheet
         if not self.sprite_sheet:
-            self.sprite_sheet = spyg.SpriteSheet("data/baleog.tsx")
+            self.sprite_sheet = SpriteSheet("data/baleog.tsx")
 
-        super().__init__(16, 16, self.sprite_sheet, {
-            "default": "fly",  # the default animation to play
-            "fly":     {"frames": [158, 159, 160, 161], "rate": 1 / 10},
-        }, shooter, anim_settings_name="arrow", width_height=(16, 5), image_rect=pygame.Rect(-8, -13, 32, 32))
+        super().__init__(
+            16,
+            16,
+            self.sprite_sheet,
+            {
+                "default": "fly",  # the default animation to play
+                "fly": {"frames": [158, 159, 160, 161], "rate": 1 / 10},
+            },
+            shooter,
+            anim_settings_name="arrow",
+            width_height=(16, 5),
+            image_rect=pygame.Rect(-8, -13, 32, 32),
+        )
 
-        self.type = spyg.Sprite.get_type("arrow,particle")
-        self.collision_mask = spyg.Sprite.get_type("default,enemy,friendly,coconut")
+        self.type = Sprite.get_type("arrow,particle")
+        self.collision_mask = Sprite.get_type("default,enemy,friendly,coconut")
 
         # simple physics, no extra component needed for that
         self.ax = -10
@@ -907,6 +1231,7 @@ class Fireball(Shot):
     """
     fireball class
     """
+
     sprite_sheet = None
 
     def __init__(self, shooter, direction="right"):
@@ -915,25 +1240,37 @@ class Fireball(Shot):
         """
         # init our recyclable SpriteSheet
         if not self.sprite_sheet:
-            self.sprite_sheet = spyg.SpriteSheet("data/egpt.tsx")
+            self.sprite_sheet = SpriteSheet("data/egpt.tsx")
 
-        super().__init__(0, 0, self.sprite_sheet, {
-            "default": "fly",  # the default animation to play
-            "fly":     {"frames": [0, 1], "rate": 1 / 5},
-            "hit":     {"frames": [40, 41], "rate": 1 / 3, "loop": False, "trigger": "collision_done"}
-        }, shooter)
+        super().__init__(
+            0,
+            0,
+            self.sprite_sheet,
+            {
+                "default": "fly",  # the default animation to play
+                "fly": {"frames": [0, 1], "rate": 1 / 5},
+                "hit": {
+                    "frames": [40, 41],
+                    "rate": 1 / 3,
+                    "loop": False,
+                    "trigger": "collision_done",
+                },
+            },
+            shooter,
+        )
 
         self.flip = {"x": (True if direction == "left" else False), "y": False}
         self.vx = 200 * (-1 if direction == "left" else 1)
-        self.type = spyg.Sprite.get_type("particle,fireball")
-        self.collision_mask = spyg.Sprite.get_type("default,friendly")
+        self.type = Sprite.get_type("particle,fireball")
+        self.collision_mask = Sprite.get_type("default,friendly")
         self.damage = 2  # a fireball causes more damage
 
 
-class FireSpitter(spyg.Sprite, spyg.Autobuild):
+class FireSpitter(Sprite, Autobuild):
     """
     a FireSpitter can spit fireballs that kill the Vikings
     """
+
     def __init__(self, x, y, w, h, tile_w, tile_h, **kwargs):
         """
         :param int x: the x position of the Ladder in tile units
@@ -946,18 +1283,28 @@ class FireSpitter(spyg.Sprite, spyg.Autobuild):
             frequency (float): the shooting frequency in 1/s
             direction (string): "left" or "right"; the x-direction of the shot being fired
         """
-        spyg.Autobuild.__init__(self, x, y, w, h, tile_w, tile_h)
+        Autobuild.__init__(self, x, y, w, h, tile_w, tile_h)
         # transform values here into px
         # call the Sprite ctor (now everything is in px)
-        spyg.Sprite.__init__(self, self.x_in_tiles * self.tile_w, self.y_in_tiles * self.tile_h,
-                             width_height=(self.w_in_tiles * self.tile_w, self.h_in_tiles * self.tile_h))
+        Sprite.__init__(
+            self,
+            self.x_in_tiles * self.tile_w,
+            self.y_in_tiles * self.tile_h,
+            width_height=(self.w_in_tiles * self.tile_w, self.h_in_tiles * self.tile_h),
+        )
         # collision types
-        self.type = spyg.Sprite.get_type("default")  # collide normally (behave like a wall)
+        self.type = Sprite.get_type(
+            "default"
+        )  # collide normally (behave like a wall)
         self.collision_mask = 0  # do not do any collisions itself
 
         # set some spitter specific things
-        self.frequency = abs(kwargs.get("frequency", 0.3))  # shooting frequency (in 1/s) (0.0 means never shoot)
-        self.direction = kwargs.get("direction", "right")  # right or left (the direction of the shooting)
+        self.frequency = abs(
+            kwargs.get("frequency", 0.3)
+        )  # shooting frequency (in 1/s) (0.0 means never shoot)
+        self.direction = kwargs.get(
+            "direction", "right"
+        )  # right or left (the direction of the shooting)
         self.last_shot_fired = 0.0  # keep track of last shot fired
 
     def tick(self, game_loop):
@@ -972,36 +1319,55 @@ class FireSpitter(spyg.Sprite, spyg.Autobuild):
         self.stage.add_sprite(Fireball(self, self.direction), "fireballs")
 
 
-class Scorpion(spyg.AnimatedSprite):
+class Scorpion(AnimatedSprite):
     # recyclable SpriteSheets
     sprite_sheet = None
 
     def __init__(self, x, y):
         # init our recyclable SpriteSheets
         if not self.sprite_sheet:
-            self.sprite_sheet = spyg.SpriteSheet("data/enemies.tsx")
+            self.sprite_sheet = SpriteSheet("data/enemies.tsx")
 
-        super().__init__(x, y, self.sprite_sheet, {
-            "default":  "stand",
-            "stand":    {"frames": [72], "loop": False, "priority": 0},
-            "get_hurt": {"frames": [72], "rate": 1 / 3, "loop": False, "next": "stand", "flags": spyg.Animation.get_flag("paralyzes"), "priority": 5},
-            "run":      {"frames": [72, 73, 74, 75, 76], "rate": 1 / 4, "priority": 1},
-            "shoot":    {"frames": [78, 79, 80, 81, 82, 83, 84], "next": "stand", "rate": 1 / 5, "flags": spyg.Animation.get_flag("paralyzes"), "priority": 2}
-        }, anim_settings_name="scorpion")
+        super().__init__(
+            x,
+            y,
+            self.sprite_sheet,
+            {
+                "default": "stand",
+                "stand": {"frames": [72], "loop": False, "priority": 0},
+                "get_hurt": {
+                    "frames": [72],
+                    "rate": 1 / 3,
+                    "loop": False,
+                    "next": "stand",
+                    "flags": Animation.get_flag("paralyzes"),
+                    "priority": 5,
+                },
+                "run": {"frames": [72, 73, 74, 75, 76], "rate": 1 / 4, "priority": 1},
+                "shoot": {
+                    "frames": [78, 79, 80, 81, 82, 83, 84],
+                    "next": "stand",
+                    "rate": 1 / 5,
+                    "flags": Animation.get_flag("paralyzes"),
+                    "priority": 2,
+                },
+            },
+            anim_settings_name="scorpion",
+        )
 
-        self.type = spyg.Sprite.get_type("enemy")
-        self.collision_mask = spyg.Sprite.get_type("default,friendly,particle")
+        self.type = Sprite.get_type("enemy")
+        self.collision_mask = Sprite.get_type("default,friendly,particle")
 
         self.is_mad = False  # when mad, moves with twice the speed
         self.is_mad_since = 0.0
 
         # add our Components
-        ai_brain = spyg.AIBrain("brain")
-        self.cmp_brain = self.add_component(ai_brain)  # type: spyg.AIBrain
+        ai_brain = AIBrain("brain")
+        self.cmp_brain = self.add_component(ai_brain)  # type: AIBrain
 
-        phys = spyg.PlatformerPhysics("physics")
+        phys = PlatformerPhysics("physics")
         phys.run_acceleration = 0  # don't accelerate (always move at max-speed)
-        self.cmp_physics = self.add_component(phys)  # type: spyg.PlatformerPhysics
+        self.cmp_physics = self.add_component(phys)  # type: PlatformerPhysics
         self.cmp_physics.vx_max = 100
 
         # register and setup our events
@@ -1042,7 +1408,10 @@ class Scorpion(spyg.AnimatedSprite):
 
     # is running (called if x-speed != 0)
     def check_running(self):
-        if self.cmp_brain.commands["left"] != self.cmp_brain.commands["right"] and self.cmp_animation.animation != "run":
+        if (
+            self.cmp_brain.commands["left"] != self.cmp_brain.commands["right"]
+            and self.cmp_animation.animation != "run"
+        ):
             self.play_animation("run")
 
     # hit a flying particle (shot, arrow, etc..)
@@ -1062,39 +1431,79 @@ class Scorpion(spyg.AnimatedSprite):
             self.is_mad = False
 
 
-class Dinosaur(spyg.AnimatedSprite):
+class Dinosaur(AnimatedSprite):
     sprite_sheet = None
 
     def __init__(self, x, y, color="blue"):
         if not self.sprite_sheet:
-            self.sprite_sheet = spyg.SpriteSheet("data/enemies.tsx")
+            self.sprite_sheet = SpriteSheet("data/enemies.tsx")
 
         self.color = color
-        self.frame_offset = 0 if self.color == "blue" else 24 if self.color == "red" else 12
+        self.frame_offset = (
+            0 if self.color == "blue" else 24 if self.color == "red" else 12
+        )
 
-        super().__init__(x, y, self.sprite_sheet, {
-            "default":  "stand",
-            "stand":    {"frames": [4 + self.frame_offset], "loop": False, "priority": 0},
-            "get_hurt": {"frames": [9 + self.frame_offset, 10 + self.frame_offset], "rate": 1 / 2, "loop": False,
-                         "next": "stand", "flags": spyg.Animation.get_flag("paralyzes")},
-            "run":      {"frames": [0 + self.frame_offset, 1 + self.frame_offset, 2 + self.frame_offset, 3 + self.frame_offset], "rate": 1 / 4},
-            "bite":     {"frames": [4 + self.frame_offset, 5 + self.frame_offset, 6 + self.frame_offset, 7 + self.frame_offset, 8 + self.frame_offset],
-                         "next": "stand", "rate": 1 / 4},
-            "die":      {"frames": [], "rate": 1 / 4, "trigger": "die", "flags": spyg.Animation.get_flag("paralyzes")},
-        }, width_height=(24, 32), anim_settings_name="dinosaur")
+        super().__init__(
+            x,
+            y,
+            self.sprite_sheet,
+            {
+                "default": "stand",
+                "stand": {
+                    "frames": [4 + self.frame_offset],
+                    "loop": False,
+                    "priority": 0,
+                },
+                "get_hurt": {
+                    "frames": [9 + self.frame_offset, 10 + self.frame_offset],
+                    "rate": 1 / 2,
+                    "loop": False,
+                    "next": "stand",
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+                "run": {
+                    "frames": [
+                        0 + self.frame_offset,
+                        1 + self.frame_offset,
+                        2 + self.frame_offset,
+                        3 + self.frame_offset,
+                    ],
+                    "rate": 1 / 4,
+                },
+                "bite": {
+                    "frames": [
+                        4 + self.frame_offset,
+                        5 + self.frame_offset,
+                        6 + self.frame_offset,
+                        7 + self.frame_offset,
+                        8 + self.frame_offset,
+                    ],
+                    "next": "stand",
+                    "rate": 1 / 4,
+                },
+                "die": {
+                    "frames": [],
+                    "rate": 1 / 4,
+                    "trigger": "die",
+                    "flags": Animation.get_flag("paralyzes"),
+                },
+            },
+            width_height=(24, 32),
+            anim_settings_name="dinosaur",
+        )
 
-        self.type = spyg.Sprite.get_type("enemy")
-        self.collision_mask = spyg.Sprite.get_type("default,friendly,particle")
+        self.type = Sprite.get_type("enemy")
+        self.collision_mask = Sprite.get_type("default,friendly,particle")
 
         # TODO: give all Sprites a `touching` list of Sprite's of type
 
         ai_brain = DinosaurBrain()
-        self.cmp_brain = self.add_component(ai_brain)  # type: spyg.AIBrain
+        self.cmp_brain = self.add_component(ai_brain)  # type: AIBrain
 
-        phys = spyg.PlatformerPhysics("physics")
+        phys = PlatformerPhysics("physics")
         phys.vx_max = 50
         phys.run_acceleration = 0
-        self.cmp_physics = self.add_component(phys)  # type: spyg.PlatformerPhysics
+        self.cmp_physics = self.add_component(phys)  # type: PlatformerPhysics
 
         self.life_energy = 3  # 0 -> die
         self.is_mad_since = 0  # when mad, moves with twice the speed
@@ -1123,7 +1532,10 @@ class Dinosaur(spyg.AnimatedSprite):
 
     # is running (called if x-speed != 0)
     def check_running(self):
-        if self.cmp_brain.commands["left"] != self.cmp_brain.commands["right"] and self.cmp_animation.animation != "run":
+        if (
+            self.cmp_brain.commands["left"] != self.cmp_brain.commands["right"]
+            and self.cmp_animation.animation != "run"
+        ):
             self.play_animation("run")
 
     def hit_particle(self, col):
@@ -1145,14 +1557,14 @@ class Dinosaur(spyg.AnimatedSprite):
         self.destroy()
 
 
-class DinosaurBrain(spyg.AIBrain):
+class DinosaurBrain(AIBrain):
     def __init__(self):
         super().__init__("brain", ["left", "right", "attack"])
 
     def bumped(self, col):
         other_sprite = col.sprite2
         # a player sprite
-        if other_sprite.type & spyg.Sprite.get_type("friendly"):
+        if other_sprite.type & Sprite.get_type("friendly"):
             # start attacking
             self.commands["attack"] = True
         # a wall?
@@ -1160,17 +1572,23 @@ class DinosaurBrain(spyg.AIBrain):
             self.toggle_direction()
 
 
-class Coconut(spyg.AnimatedSprite):
+class Coconut(AnimatedSprite):
     def __init__(self, x, y, **kwargs):
-        super().__init__(x, y, spyg.SpriteSheet("data/coconut.tsx"), {
-            "default": "stand",
-            "stand": {"frames": [0]},
-            "roll": {"frames": [0, 1, 2, 3], "rate": 1 / 5, "loop": True},
-        }, **kwargs)
+        super().__init__(
+            x,
+            y,
+            SpriteSheet("data/coconut.tsx"),
+            {
+                "default": "stand",
+                "stand": {"frames": [0]},
+                "roll": {"frames": [0, 1, 2, 3], "rate": 1 / 5, "loop": True},
+            },
+            **kwargs
+        )
 
-        self.type = spyg.Sprite.get_type("coconut")
+        self.type = Sprite.get_type("coconut")
         # only react to arrows
-        self.collision_mask = spyg.Sprite.get_type("arrow")
+        self.collision_mask = Sprite.get_type("arrow")
 
         self.start_location = (x, y)
         self.is_damaged = False  # True if has been hit already once by an arrow
@@ -1218,8 +1636,8 @@ class Coconut(spyg.AnimatedSprite):
                 self.shake()
 
         # hit the ground -> stop falling and start rolling to side
-        if isinstance(other_obj, spyg.TileSprite):
-            self.collision_mask &= ~spyg.Sprite.get_type("arrow")
+        if isinstance(other_obj, TileSprite):
+            self.collision_mask &= ~Sprite.get_type("arrow")
             self.is_falling = False
             self.hit_ground = True
             self.vy = 0

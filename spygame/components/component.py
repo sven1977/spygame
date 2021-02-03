@@ -37,7 +37,9 @@ class Component(GameObject, metaclass=ABCMeta):
 
         :param callable method: method, which to make callable from within the owning GameObject
         """
-        assert self.game_object, "ERROR: need self.game_object in order to extend the method to that GameObject!"
+        assert (
+            self.game_object
+        ), "ERROR: need self.game_object in order to extend the method to that GameObject!"
 
         # keep the original method under a different name (just in case it's still needed by the overwriting method)
         old = getattr(self.game_object, method.__name__, None)
@@ -45,4 +47,8 @@ class Component(GameObject, metaclass=ABCMeta):
             setattr(self.game_object, "_super_" + method.__name__, old)
 
         # use the MethodType function to bind the given method function to only this object (not any other instances of the GameObject's class)
-        setattr(self.game_object, method.__name__, types.MethodType(method, self.game_object))
+        setattr(
+            self.game_object,
+            method.__name__,
+            types.MethodType(method, self.game_object),
+        )

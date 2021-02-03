@@ -8,6 +8,7 @@ class Elevator(Sprite):
     Has a Dockable Component to be able to carry characters standing on top of it.
     Is of type one_way_platform so one can jump on the Elevator also from below it.
     """
+
     def __init__(self, x, y, direction="y", initial_veloc=50, max_pos=500, min_pos=0):
         super().__init__(x, y, image_file="images/elevator.png")
         self.direction = direction
@@ -18,6 +19,7 @@ class Elevator(Sprite):
 
         # add Dockable component (so that objects can stand on the elevator and move along with it)
         from spygame.components.dockable import Dockable
+
         self.cmp_dockable = self.add_component(Dockable("dockable"))  # type: Dockable
 
         # adjust the type

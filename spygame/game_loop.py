@@ -1,5 +1,8 @@
 import pygame
 
+from spygame.keyboard_inputs import KeyboardInputs
+from spygame.utils import defaults
+
 
 class GameLoop(object):
     """
@@ -33,15 +36,18 @@ class GameLoop(object):
         :rtype: Union[GameLoop,None]
         """
 
-        defaults(kwargs, {
-            "force_loop": False,
-            "screen_obj": None,
-            "keyboard_inputs": None,
-            "display": None,
-            "max_fps": None,
-            "game_loop": "new",
-            "dont_play": False,
-        })
+        defaults(
+            kwargs,
+            {
+                "force_loop": False,
+                "screen_obj": None,
+                "keyboard_inputs": None,
+                "display": None,
+                "max_fps": None,
+                "game_loop": "new",
+                "dont_play": False,
+            },
+        )
 
         # - if there's no other loop active, run the default stageGameLoop
         # - or: there is an active loop, but we force overwrite it
@@ -73,8 +79,13 @@ class GameLoop(object):
                     max_fps = kwargs["screen_obj"].max_fps
 
                 # Create a new GameLoop object.
-                loop = GameLoop(Stage.stage_default_game_loop_callback, display=display,
-                                keyboard_inputs=keyboard_inputs, max_fps=max_fps)
+                from spygame.stage import Stage
+                loop = GameLoop(
+                    Stage.stage_default_game_loop_callback,
+                    display=display,
+                    keyboard_inputs=keyboard_inputs,
+                    max_fps=max_fps,
+                )
                 # And play it, if necessary.
                 if not kwargs["dont_play"]:
                     loop.play()

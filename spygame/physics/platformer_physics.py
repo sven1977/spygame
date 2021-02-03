@@ -1,3 +1,10 @@
+import math
+
+from spygame.components.dockable import Dockable
+from spygame.physics.physics_component import ControlledPhysicsComponent
+from spygame.sprites.sprite import Sprite
+
+
 class PlatformerPhysics(ControlledPhysicsComponent):
     """
     Defines "The Lost Vikings"-like game physics.
@@ -24,7 +31,9 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         best_tile = None  # the highest tile in this row (if not height==0.0)
         tile = tiles[0]
         if tile:
-            max_y = max(tile.get_y(start_abs - tile.rect.left), tile.get_y(tile.rect.width))
+            max_y = max(
+                tile.get_y(start_abs - tile.rect.left), tile.get_y(tile.rect.width)
+            )
             best_tile = tile
         else:
             max_y = 0
@@ -69,7 +78,9 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         self.is_heavy = False  # set to True if this object should squeeze other objects that are below it and cannot move away
         # set to a value > 0 to define the squeezeSpeed at which this object gets squeezed by heavy objects (objects with is_heavy == True)
         self.squeeze_speed = 0
-        self.push_back_list = []  # a list of push back x-forces that will be applied (if populated) frame by frame on our GameObject
+        self.push_back_list = (
+            []
+        )  # a list of push back x-forces that will be applied (if populated) frame by frame on our GameObject
         # if an up-slope (e.g. 20°) does not reach it full-tiled right neighbor, would a sprite treat this as stairs and still climb up the full-tile
         self.allow_stairs_climb = True
 
@@ -81,7 +92,9 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         self.touched_ladder = None  # holds the ladder Sprite, if player is currently touching a Ladder (not locked in!), otherwise: None
         self.climb_frame_value = 0  # int([climb_frame_value]) determines the frame to use to display climbing position
 
-        self.game_obj_cmp_dockable = None  # type: Dockable; the GameObject's Dockable component (that we will add to the GameObject ourselves)
+        self.game_obj_cmp_dockable = (
+            None
+        )  # type: Dockable; the GameObject's Dockable component (that we will add to the GameObject ourselves)
 
     def added(self):
         super().added()
@@ -95,7 +108,15 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         obj.collision_mask |= Sprite.get_type("default,ladder,liquid")
 
         # register events that we may trigger directly on the game_object
-        obj.register_event("hit.particle", "hit.liquid", "squeezed.top", "bump.top", "bump.bottom", "bump.left", "bump.right")
+        obj.register_event(
+            "hit.particle",
+            "hit.liquid",
+            "squeezed.top",
+            "bump.top",
+            "bump.bottom",
+            "bump.left",
+            "bump.right",
+        )
 
     def lock_ladder(self):
         """
@@ -105,7 +126,7 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         obj = self.game_object
 
         # test x-direction after corrective x-move to center of ladder (if there is something, don't lock)
-        #obj.stage.locate()
+        # obj.stage.locate()
 
         self.on_ladder = self.touched_ladder
         # switch off gravity
@@ -152,7 +173,7 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         obj = self.game_object
         dockable = obj.components["dockable"]
 
-        #print("dt={} x={} vx={}".format(dt, obj.rect.x, self.vx))
+        # print("dt={} x={} vx={}".format(dt, obj.rect.x, self.vx))
 
         # entity has a brain component
         if self.game_obj_cmp_brain:
@@ -165,7 +186,7 @@ class PlatformerPhysics(ControlledPhysicsComponent):
                     if self.stops_abruptly_on_direction_change and self.vx > 0:
                         self.vx = 0  # stop first if still walking in other direction
                     ax += -(self.run_acceleration or 999000000000)  # accelerate left
-                    obj.flip['x'] = True  # mirror other_sprite
+                    obj.flip["x"] = True  # mirror other_sprite
 
                     # user is pressing left or right -> leave on_ladder state
                     self.unlock_ladder()
@@ -178,7 +199,7 @@ class PlatformerPhysics(ControlledPhysicsComponent):
                 if self.stops_abruptly_on_direction_change and self.vx < 0:
                     self.vx = 0  # stop first if still walking in other direction
                 ax += self.run_acceleration or 999000000000  # accelerate right
-                obj.flip['x'] = False
+                obj.flip["x"] = False
 
                 # user is pressing left or right -> leave on_ladder state
                 self.unlock_ladder()
@@ -201,7 +222,12 @@ class PlatformerPhysics(ControlledPhysicsComponent):
                     else:
                         self.vy = -self.climb_speed
                 # player locks into ladder
-                elif self.touched_ladder and self.touched_ladder.rect.bottom >= obj.rect.bottom > self.touched_ladder.rect.top:
+                elif (
+                    self.touched_ladder
+                    and self.touched_ladder.rect.bottom
+                    >= obj.rect.bottom
+                    > self.touched_ladder.rect.top
+                ):
                     self.lock_ladder()
             # user is pressing only 'down' (ladder?)
             elif self.game_obj_cmp_brain.commands.get("down", False):
@@ -212,7 +238,11 @@ class PlatformerPhysics(ControlledPhysicsComponent):
                     # move down
                     else:
                         self.vy = self.climb_speed
-                elif self.touched_ladder and obj.rect.bottom < self.touched_ladder.rect.bottom and dockable.is_docked():
+                elif (
+                    self.touched_ladder
+                    and obj.rect.bottom < self.touched_ladder.rect.bottom
+                    and dockable.is_docked()
+                ):
                     self.lock_ladder()
             # jumping?
             elif self.can_jump:
@@ -220,7 +250,9 @@ class PlatformerPhysics(ControlledPhysicsComponent):
                 if not jump:
                     self.disable_jump = False
                 else:
-                    if (self.on_ladder or dockable.is_docked()) and not self.disable_jump:
+                    if (
+                        self.on_ladder or dockable.is_docked()
+                    ) and not self.disable_jump:
                         self.unlock_ladder()
                         self.vy = -self.jump_speed
                         dockable.undock()
@@ -275,7 +307,7 @@ class PlatformerPhysics(ControlledPhysicsComponent):
                     game_loop.display.debug_refresh()
                 self.collide_in_one_direction(obj, "x", self.vx, orig_pos)
 
-                #print("dt={} sx={} vx={}".format(dt, sx, self.vx))
+                # print("dt={} sx={} vx={}".format(dt, sx, self.vx))
 
             # then move in y-direction and solve y-collisions
             if self.vy != 0.0:
@@ -290,7 +322,9 @@ class PlatformerPhysics(ControlledPhysicsComponent):
 
             dt_step -= dt
 
-    def collide_in_one_direction(self, sprite, direction, direction_veloc, original_pos):
+    def collide_in_one_direction(
+        self, sprite, direction, direction_veloc, original_pos
+    ):
         """
         Detects and solves all possible collisions between our GameObject and all Stage's objects (layers and Sprites) in one direction (x or y).
 
@@ -305,13 +339,21 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         if sprite.collision_mask & Sprite.get_type("default"):
             for layer in stage.tiled_tile_layers.values():
                 if layer.type & Sprite.get_type("default"):
-                    self.collide_with_collision_layer(sprite, layer, direction, direction_veloc, original_pos)
+                    self.collide_with_collision_layer(
+                        sprite, layer, direction, direction_veloc, original_pos
+                    )
         # simple sprites (e.g. enemies)
         for other_sprite in stage.sprites:
             if sprite is other_sprite:
                 continue
             if sprite.collision_mask & other_sprite.type:
-                col = AABBCollision.collide(sprite, other_sprite, direction=direction, direction_veloc=direction_veloc, original_pos=original_pos)
+                col = AABBCollision.collide(
+                    sprite,
+                    other_sprite,
+                    direction=direction,
+                    direction_veloc=direction_veloc,
+                    original_pos=original_pos,
+                )
                 if col:
                     sprite.trigger_event("collision", col)
         # TODO: non-default layers (touch?)
@@ -319,7 +361,9 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         #    if not layer.type & Sprite.get_type("default") and sprite.collision_mask & layer.type:
         #        layer.collide(sprite, direction, direction_veloc, original_pos)
 
-    def collide_with_collision_layer(self, sprite, layer, direction, direction_veloc, original_pos):
+    def collide_with_collision_layer(
+        self, sprite, layer, direction, direction_veloc, original_pos
+    ):
         """
         Collides a Sprite with a collision TiledTileLayer (type==default) and solves all detected collisions.
         Supports slopes of all shapes (given y = mx + b parameterized).
@@ -334,7 +378,12 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         :param Tuple[int,int] original_pos: the position of the sprite before the move that caused this collision test to be executed
         """
         # determine the tile boundaries (which tiles does the sprite overlap with?)
-        tile_start_x, tile_end_x, tile_start_y, tile_end_y = layer.get_overlapping_tiles(sprite)
+        (
+            tile_start_x,
+            tile_end_x,
+            tile_start_y,
+            tile_end_y,
+        ) = layer.get_overlapping_tiles(sprite)
 
         # if sprite is moving in +/-x-direction:
         # 1) move in columns from left to right (right to left) to look for full collision tiles
@@ -345,37 +394,83 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         # 2) if one found, move Sprite out of it and that's it
         # 3) move again from top to bottom and in each row look for the highest slope under the Sprite
         # 4) if on e found that's not 0-height -> process that (y-pull or y-push) and return
-        if direction == 'x':
+        if direction == "x":
             # find full collision tiles (no reaching(!) slope neighbor in negative veloc direction)
             # - non-reaching slope neighbors are slopes whose highest point would not reach the full neighbor tile (is smaller than 1.0 * tileheight)
             direction_x = int(math.copysign(1.0, direction_veloc))
-            for tile_x in range(tile_start_x if direction_x > 0 else tile_end_x, (tile_end_x if direction_x > 0 else tile_start_x) + direction_x, direction_x):
-                for tile_y in range(tile_start_y, tile_end_y + 1):  # y-order doesn't matter
+            for tile_x in range(
+                tile_start_x if direction_x > 0 else tile_end_x,
+                (tile_end_x if direction_x > 0 else tile_start_x) + direction_x,
+                direction_x,
+            ):
+                for tile_y in range(
+                    tile_start_y, tile_end_y + 1
+                ):  # y-order doesn't matter
                     tile_sprite = layer.tile_sprites[tile_x, tile_y]
                     # TODO: make this work for non-full slope==0 tiles (e.g. half tiles where top half is missing)
                     if tile_sprite and tile_sprite.is_full:
                         # is there a reaching slope in negative veloc direction? -> return the neighbor reaching slope tile instead
                         neighbor = layer.tile_sprites[(tile_x - direction_x), tile_y]
-                        neighbor_border_y = neighbor.get_y(layer.pytmx_tiled_map.tilewidth if direction_x == 1 else 0) if neighbor else 0
+                        neighbor_border_y = (
+                            neighbor.get_y(
+                                layer.pytmx_tiled_map.tilewidth
+                                if direction_x == 1
+                                else 0
+                            )
+                            if neighbor
+                            else 0
+                        )
                         # neighbor slope reaches til top of full tile OR neighbor slope-tile is at least 1px high and `stairs` option is enabled
                         # -> do a y-collision on the full tile with low vy (to avoid crash/high impact)
                         if neighbor_border_y > 0:
                             # neighbor slope reaches full tile OR stairs option enabled
-                            if neighbor_border_y >= tile_sprite.offset * layer.pytmx_tiled_map.tileheight or self.allow_stairs_climb:
-                                col = AABBCollision.collide(sprite, tile_sprite, None, "y", 0.1, original_pos)
+                            if (
+                                neighbor_border_y
+                                >= tile_sprite.offset * layer.pytmx_tiled_map.tileheight
+                                or self.allow_stairs_climb
+                            ):
+                                col = AABBCollision.collide(
+                                    sprite, tile_sprite, None, "y", 0.1, original_pos
+                                )
                             # neighbor slope not high enough AND stairs option disabled -> 1) bump up sprite on slope 2) solve x-collision against full tile
                             else:
                                 # make sure the sprite is bumped up on the neighbor up-slope (this may already be done by the xy-pull if vx is not too high)
                                 if sprite.components["dockable"].is_docked():
-                                    sprite.move(0.0, -(sprite.rect.bottom - (neighbor.rect.bottom - neighbor_border_y)))
+                                    sprite.move(
+                                        0.0,
+                                        -(
+                                            sprite.rect.bottom
+                                            - (neighbor.rect.bottom - neighbor_border_y)
+                                        ),
+                                    )
                                 # no stairs -> bump against full tile from the side
-                                col = AABBCollision.collide(sprite, tile_sprite, None, direction, direction_veloc, original_pos)
+                                col = AABBCollision.collide(
+                                    sprite,
+                                    tile_sprite,
+                                    None,
+                                    direction,
+                                    direction_veloc,
+                                    original_pos,
+                                )
                         # normal full-tile x-collision w/o neighbor slope
                         else:
-                            col = AABBCollision.collide(sprite, tile_sprite, None, direction, direction_veloc, original_pos)
+                            col = AABBCollision.collide(
+                                sprite,
+                                tile_sprite,
+                                None,
+                                direction,
+                                direction_veloc,
+                                original_pos,
+                            )
 
-                        assert col, "ERROR: there must be a col returned from collision detector for tile {},{} neighbored by {},{}!".\
-                            format(tile_sprite.tile_x, tile_sprite.tile_y, (neighbor.tile_x if neighbor else "none"), (neighbor.tile_y if neighbor else "none"))
+                        assert (
+                            col
+                        ), "ERROR: there must be a col returned from collision detector for tile {},{} neighbored by {},{}!".format(
+                            tile_sprite.tile_x,
+                            tile_sprite.tile_y,
+                            (neighbor.tile_x if neighbor else "none"),
+                            (neighbor.tile_y if neighbor else "none"),
+                        )
 
                         sprite.trigger_event("collision", col)
                         return
@@ -387,8 +482,19 @@ class PlatformerPhysics(ControlledPhysicsComponent):
                 for tile_x in range(tile_start_x, tile_end_x + 1):
                     tile_sprite = layer.tile_sprites[tile_x, tile_y]
                     if tile_sprite and tile_sprite.is_full:
-                        col = AABBCollision.collide(sprite, tile_sprite, None, direction, direction_veloc, original_pos)
-                        assert col, "ERROR: there must be a col returned from collision detector for tile {},{}!".format(tile_x, tile_y)
+                        col = AABBCollision.collide(
+                            sprite,
+                            tile_sprite,
+                            None,
+                            direction,
+                            direction_veloc,
+                            original_pos,
+                        )
+                        assert (
+                            col
+                        ), "ERROR: there must be a col returned from collision detector for tile {},{}!".format(
+                            tile_x, tile_y
+                        )
                         sprite.trigger_event("collision", col)
                         return
             # there was nothing above (no collision); have to return here not to go into following for-loop
@@ -403,16 +509,34 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         is_docked = dockable.is_docked()
 
         for tile_y in range(tile_start_y, tile_end_y + 1):
-            tiles_to_check = [layer.tile_sprites[tile_x, tile_y] for tile_x in range(tile_start_x, tile_end_x + 1)]
-            (highest_tile, highest_height) = self.get_highest_tile(tiles_to_check, "x", sprite.rect.left, sprite.rect.right)
+            tiles_to_check = [
+                layer.tile_sprites[tile_x, tile_y]
+                for tile_x in range(tile_start_x, tile_end_x + 1)
+            ]
+            (highest_tile, highest_height) = self.get_highest_tile(
+                tiles_to_check, "x", sprite.rect.left, sprite.rect.right
+            )
             # we found some high tile in this row -> process and return
             if highest_tile is not None:
                 # y-direction (falling): deal with impact/docking/etc..
                 if direction == "y":
-                    col = AABBCollision.collide(sprite, highest_tile, None, direction, direction_veloc, original_pos)
-                    assert col, "ERROR: there must be a col returned from collision detector (y) for tile {},{}!".format(highest_tile.tile_x, tile_y)
+                    col = AABBCollision.collide(
+                        sprite,
+                        highest_tile,
+                        None,
+                        direction,
+                        direction_veloc,
+                        original_pos,
+                    )
+                    assert (
+                        col
+                    ), "ERROR: there must be a col returned from collision detector (y) for tile {},{}!".format(
+                        highest_tile.tile_x, tile_y
+                    )
                     # fix our y-pull value via separate[1] (AABB does not know slopes, we have to adapt it to the slope's shape)
-                    col.separate[1] = - (sprite.rect.bottom - (highest_tile.rect.bottom - highest_height))
+                    col.separate[1] = -(
+                        sprite.rect.bottom - (highest_tile.rect.bottom - highest_height)
+                    )
                     # we were already docked on ground OR the y-pull is negative (up) -> real collision
                     if is_docked or col.separate[1] < 0:
                         sprite.trigger_event("collision", col)
@@ -436,7 +560,11 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         :param Collision col: the collision object of the detected collision (the first sprite in that Collision object must be our GameObject)
         """
         obj = self.game_object
-        assert obj is col.sprite1, "ERROR: game_object ({}) of physics component is not identical with passed in col.sprite1 ({})!".format(obj, col.sprite1)
+        assert (
+            obj is col.sprite1
+        ), "ERROR: game_object ({}) of physics component is not identical with passed in col.sprite1 ({})!".format(
+            obj, col.sprite1
+        )
         dockable = obj.components["dockable"]
 
         assert hasattr(col, "sprite2"), "ERROR: no sprite2 in col-object!"
@@ -448,7 +576,11 @@ class PlatformerPhysics(ControlledPhysicsComponent):
             # obj is not heavy -> push back from getting hit by that particle
             if not self.is_heavy:
                 obj.trigger_event("hit.particle", col)
-                push_direction = col.normal_x if col.normal_x != 0 else math.copysign(1.0, getattr(other_obj, "vx", 0.0))
+                push_direction = (
+                    col.normal_x
+                    if col.normal_x != 0
+                    else math.copysign(1.0, getattr(other_obj, "vx", 0.0))
+                )
                 if push_direction != 0.0:
                     self.push_back([500 * push_direction] * 5)
             return
@@ -465,7 +597,11 @@ class PlatformerPhysics(ControlledPhysicsComponent):
                     return
             # we are x-colliding with the one-way-platform OR y-colliding in up direction OR y-colliding in down direction but not(!)
             # with the top of the one-way-platform -> ignore collision and return
-            if col.direction == "x" or col.direction_veloc < 0 or (col.original_pos[1] + obj.rect.height) > other_obj.rect.top:
+            if (
+                col.direction == "x"
+                or col.direction_veloc < 0
+                or (col.original_pos[1] + obj.rect.height) > other_obj.rect.top
+            ):
                 return
 
         # TODO: get rid of this:
@@ -476,7 +612,9 @@ class PlatformerPhysics(ControlledPhysicsComponent):
             # colliding with an exit
             if type_ == "exit":
                 self.at_exit = True
-                obj.stage.screen.trigger_event("reached_exit", obj)  # let the level know
+                obj.stage.screen.trigger_event(
+                    "reached_exit", obj
+                )  # let the level know
                 return
         # a liquid body
         elif isinstance(other_obj, LiquidBody):
@@ -503,18 +641,33 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         # bottom collision
         if col.normal_y < -0.3:
             # a heavy object hit the ground -> rock the stage
-            if self.is_heavy and not dockable.is_docked() and other_obj.type & Sprite.get_type("default"):
+            if (
+                self.is_heavy
+                and not dockable.is_docked()
+                and other_obj.type & Sprite.get_type("default")
+            ):
                 obj.stage.shake_viewport()
 
             other_obj_dockable = other_obj.components.get("dockable", None)
 
             # squeezing something
-            if self.vy > 0 and isinstance(other_obj_physics, PlatformerPhysics) and self.is_heavy and other_obj_physics.squeeze_speed > 0 and \
-                    other_obj_dockable and other_obj_dockable.is_docked():
+            if (
+                self.vy > 0
+                and isinstance(other_obj_physics, PlatformerPhysics)
+                and self.is_heavy
+                and other_obj_physics.squeeze_speed > 0
+                and other_obj_dockable
+                and other_obj_dockable.is_docked()
+            ):
 
                 # adjust the collision separation to the new squeezeSpeed
                 if self.vy > other_obj_physics.squeeze_speed:
-                    obj.move(None, y_orig - col.separate[1] * (other_obj_physics.squeeze_speed / self.vy), absolute=True)
+                    obj.move(
+                        None,
+                        y_orig
+                        - col.separate[1] * (other_obj_physics.squeeze_speed / self.vy),
+                        absolute=True,
+                    )
                 # otherwise, just undo the y-separation
                 else:
                     obj.move(0.0, -col.separate[1])
@@ -527,7 +680,9 @@ class PlatformerPhysics(ControlledPhysicsComponent):
                 if self.vy > 0:
                     self.vy = 0
                 col.impact = impact_y
-                dockable.dock_to(other_obj)  # dock to bottom object (collision layer, MovableRock, Ladder (top), etc..)
+                dockable.dock_to(
+                    other_obj
+                )  # dock to bottom object (collision layer, MovableRock, Ladder (top), etc..)
                 obj.trigger_event("bump.bottom", col)
 
         # top collision
@@ -542,18 +697,27 @@ class PlatformerPhysics(ControlledPhysicsComponent):
             col.impact = impact_x
             bump_wall = False
             # we hit a pushable object -> check if it can move
-            if other_obj_physics and hasattr(other_obj_physics, "is_pushable") and other_obj_physics.is_pushable and dockable.is_docked():
+            if (
+                other_obj_physics
+                and hasattr(other_obj_physics, "is_pushable")
+                and other_obj_physics.is_pushable
+                and dockable.is_docked()
+            ):
                 self.push_an_object(obj, col)
                 bump_wall = True
             # we hit a fixed wall (non-pushable)
-            elif self.vx * col.normal_x < 0:  # if normalX < 0 -> p.vx is > 0 -> set to 0; if normalX > 0 -> p.vx is < 0 -> set to 0
+            elif (
+                self.vx * col.normal_x < 0
+            ):  # if normalX < 0 -> p.vx is > 0 -> set to 0; if normalX > 0 -> p.vx is < 0 -> set to 0
                 self.vx = 0
                 bump_wall = True
 
             if bump_wall:
                 if other_obj.type & Sprite.get_type("default"):
                     self.at_wall = True
-                obj.trigger_event("bump." + ("right" if col.normal_x < 0 else "left"), col)
+                obj.trigger_event(
+                    "bump." + ("right" if col.normal_x < 0 else "left"), col
+                )
 
     def push_an_object(self, pusher, col):
         """
@@ -567,7 +731,7 @@ class PlatformerPhysics(ControlledPhysicsComponent):
         orig_x = pushee.rect.x
         pushee_phys = pushee.components["physics"]
         # calculate the amount to move in x-direction based on vx_max and the collision-separation
-        move_x = - col.separate[0] * abs(pushee_phys.vx_max / col.direction_veloc)
+        move_x = -col.separate[0] * abs(pushee_phys.vx_max / col.direction_veloc)
         # adjust x-speed based on vx_max
         self.vx = math.copysign(pushee_phys.vx_max, col.direction_veloc)
 
@@ -584,4 +748,3 @@ class PlatformerPhysics(ControlledPhysicsComponent):
             x_delta = pushee.rect.left - pusher.rect.right
         # and we are done
         pusher.move(x_delta, 0)
-

@@ -15,7 +15,9 @@ class Display(object):
         :param int height: the height of the Display
         :param str title: the caption to use on the pygame display
         """
-        assert not Display.instantiated, "ERROR: can only create one {} object!".format(type(self).__name__)
+        assert not Display.instantiated, "ERROR: can only create one {} object!".format(
+            type(self).__name__
+        )
         Display.instantiated = True
 
         pygame.display.set_caption(title)
@@ -34,7 +36,9 @@ class Display(object):
         self.width = width
         self.height = height
         pygame.display.set_mode((width, height))
-        assert self.surface is pygame.display.get_surface(), "ERROR: self.display is not same object as pygame.display.get_surface() anymore!"
+        assert (
+            self.surface is pygame.display.get_surface()
+        ), "ERROR: self.display is not same object as pygame.display.get_surface() anymore!"
 
     def debug_refresh(self):
         """

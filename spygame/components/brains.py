@@ -1,6 +1,10 @@
 from abc import ABCMeta, abstractmethod
 
+from spygame.game_loop import GameLoop
+from spygame.components.animation import Animation
 from spygame.components.component import Component
+from spygame.sprites.sprite import Sprite
+
 
 
 class Brain(Component, metaclass=ABCMeta):
@@ -9,13 +13,16 @@ class Brain(Component, metaclass=ABCMeta):
     Also has a main-switch to activate/deactivate the Brain.
     Should implement `tick` method and set self.commands each tick.
     """
+
     def __init__(self, name="brain", commands=None):
         super().__init__(name)
 
         self.is_active = True  # main switch: if False, we don't do anything
         if not commands:
             commands = []
-        self.commands = {command: False for command in commands}  # the commands coming from the brain (e.g. `jump`, `sword`, `attack`, etc..)
+        self.commands = {
+            command: False for command in commands
+        }  # the commands coming from the brain (e.g. `jump`, `sword`, `attack`, etc..)
 
     def reset(self):
         """
@@ -51,6 +58,7 @@ class SimpleHumanBrain(Brain):
     """
     looks for keys that match our stored commands and sets these commands to True if the key is pressed, False otherwise
     """
+
     def added(self):
         pass
 
@@ -76,10 +84,12 @@ class SimpleHumanBrain(Brain):
             # look up the key-to-command translation rules
             self.commands[desc] = is_pressed
 
+
 class AnimationLinkedBrain(Brain, metaclass=ABCMeta):
     """
     A Brain that is linked to an Animation component and can thus subscribe to events triggered by that Component.
     """
+
     def __init__(self, name="brain", commands=None):
         super().__init__(name, commands)
         self.game_obj_cmp_anim = None  # our GameObject's Animation Component (if any); needed for animation flags
@@ -87,8 +97,11 @@ class AnimationLinkedBrain(Brain, metaclass=ABCMeta):
     def added(self):
         # search for an Animation component of our game_object
         self.game_obj_cmp_anim = self.game_object.components.get("animation")
-        assert isinstance(self.game_obj_cmp_anim, Animation),\
-            "ERROR: {} needs its GameObject to also have a Component called `animation` that's of type Animation!".format(type(self).__name__)
+        assert isinstance(
+            self.game_obj_cmp_anim, Animation
+        ), "ERROR: {} needs its GameObject to also have a Component called `animation` that's of type Animation!".format(
+            type(self).__name__
+        )
 
 
 class HumanPlayerBrain(AnimationLinkedBrain):
@@ -96,6 +109,7 @@ class HumanPlayerBrain(AnimationLinkedBrain):
     An AnimationLinkedBrain that handles agent control (via the GameLoop´s keyboard registry).
     Supports special keyboard->command translations (e.g. key down -> command A for one tick; key up -> command B for one tick).
     """
+
     def __init__(self, name="brain", key_brain_translations=None):
         """
         :param str name: the name of this component
@@ -116,7 +130,9 @@ class HumanPlayerBrain(AnimationLinkedBrain):
         self.animation_prev = None
 
         self.is_paralyzed = False  # is this brain paralyzed? (e.g. when agent is dizzy)
-        self.paralyzes_exceptions = None  # keys that are still ok to be handled, even if paralyzed
+        self.paralyzes_exceptions = (
+            None  # keys that are still ok to be handled, even if paralyzed
+        )
 
     def added(self):
         super().added()
@@ -139,7 +155,9 @@ class HumanPlayerBrain(AnimationLinkedBrain):
                 self.add_translations(trans)
         # str: key = command
         elif isinstance(key_brain_translations, str):
-            self.add_translations(KeyboardBrainTranslation(key_brain_translations, key_brain_translations))
+            self.add_translations(
+                KeyboardBrainTranslation(key_brain_translations, key_brain_translations)
+            )
         # tuple: pass as positional args into c'tor (key,cmd,flags,other_cmd,anim_to_be_completed)
         elif isinstance(key_brain_translations, tuple):
             self.add_translations(KeyboardBrainTranslation(*key_brain_translations))
@@ -148,16 +166,25 @@ class HumanPlayerBrain(AnimationLinkedBrain):
             self.add_translations(KeyboardBrainTranslation(**key_brain_translations))
         # KeyboardBrainTranslation: take as is and store
         elif isinstance(key_brain_translations, KeyboardBrainTranslation):
-            assert key_brain_translations.key not in self.key_brain_translations, "ERROR: key {} already in key_brain_translations dict!". \
-                format(key_brain_translations.key)
-            self.key_brain_translations[key_brain_translations.key] = key_brain_translations
-            self.keyboard_prev[key_brain_translations.key] = False  # create the entry for the key (for faster lookup later without [dict].get())
+            assert (
+                key_brain_translations.key not in self.key_brain_translations
+            ), "ERROR: key {} already in key_brain_translations dict!".format(
+                key_brain_translations.key
+            )
+            self.key_brain_translations[
+                key_brain_translations.key
+            ] = key_brain_translations
+            self.keyboard_prev[
+                key_brain_translations.key
+            ] = False  # create the entry for the key (for faster lookup later without [dict].get())
             self.commands[key_brain_translations.command] = False
             if key_brain_translations.other_command:
                 self.commands[key_brain_translations.other_command] = False
         # not supported type
         else:
-            raise Exception("ERROR: key_brain_translations parameter has wrong type; needs to be str, KeyboardBrainTranslation, tuple, or dict!")
+            raise Exception(
+                "ERROR: key_brain_translations parameter has wrong type; needs to be str, KeyboardBrainTranslation, tuple, or dict!"
+            )
 
     def remove_translation(self, key):
         """
@@ -167,12 +194,12 @@ class HumanPlayerBrain(AnimationLinkedBrain):
         """
         self.key_brain_translations.pop(key, None)
 
-    #def enable_translation(self, key):
+    # def enable_translation(self, key):
     #    trans = self.key_brain_translations.get(key)
     #    if trans:
     #        trans.is_disabled = False
 
-    #def disable_translation(self, key):
+    # def disable_translation(self, key):
     #    trans = self.key_brain_translations.get(key)
     #    if trans:
     #        trans.is_disabled = True
@@ -190,8 +217,12 @@ class HumanPlayerBrain(AnimationLinkedBrain):
             return
 
         # support for `paralyzes` flag and `paralyzes_exceptions` is built into this class
-        self.is_paralyzed = bool(self.game_obj_cmp_anim.flags & Animation.get_flag("paralyzes"))
-        self.paralyzes_exceptions = self.game_obj_cmp_anim.properties.get("paralyzes_exceptions")
+        self.is_paralyzed = bool(
+            self.game_obj_cmp_anim.flags & Animation.get_flag("paralyzes")
+        )
+        self.paralyzes_exceptions = self.game_obj_cmp_anim.properties.get(
+            "paralyzes_exceptions"
+        )
 
         # first reset everything to False
         self.reset()
@@ -201,9 +232,21 @@ class HumanPlayerBrain(AnimationLinkedBrain):
             # look up the str description of the key
             desc = game_loop.keyboard_inputs.descriptions[key_code]
             # look up the key-to-command translation rules
-            trans = self.key_brain_translations.get(desc)  # type: KeyboardBrainTranslation
+            trans = self.key_brain_translations.get(
+                desc
+            )  # type: KeyboardBrainTranslation
             # not a known key to this Brain OR this translation is (temporarily) disabled
-            if not trans or trans.is_disabled or (self.is_paralyzed and (not self.paralyzes_exceptions or desc not in self.paralyzes_exceptions)):
+            if (
+                not trans
+                or trans.is_disabled
+                or (
+                    self.is_paralyzed
+                    and (
+                        not self.paralyzes_exceptions
+                        or desc not in self.paralyzes_exceptions
+                    )
+                )
+            ):
                 continue
             # normal translation
             if trans.flags == trans.NORMAL:
@@ -215,8 +258,11 @@ class HumanPlayerBrain(AnimationLinkedBrain):
                     # key was previously up -> new press
                     if self.keyboard_prev[desc] is False:
                         # check for condition on the current anim (don't set command if a certain anim is currently playing)
-                        if (trans.flags & trans.BLOCK_REPEAT_UNTIL_ANIM_COMPLETE) == 0 or \
-                                self.game_obj_cmp_anim.animation not in trans.animation_to_complete:
+                        if (
+                            (trans.flags & trans.BLOCK_REPEAT_UNTIL_ANIM_COMPLETE) == 0
+                            or self.game_obj_cmp_anim.animation
+                            not in trans.animation_to_complete
+                        ):
                             self.commands[trans.command] = True
                 # NORMAL: down -> leave command=True
                 else:
@@ -238,7 +284,10 @@ class HumanPlayerBrain(AnimationLinkedBrain):
                     else:
                         self.commands[trans.other_command] = True
                 # if we are waiting for other_command to be charged -> check whether we have to keep the main command active (until charging is done)
-                elif trans.flags & trans.BLOCK_OTHER_CMD_UNTIL_ANIM_COMPLETE and trans.state_other_command & trans.STATE_CHARGING:
+                elif (
+                    trans.flags & trans.BLOCK_OTHER_CMD_UNTIL_ANIM_COMPLETE
+                    and trans.state_other_command & trans.STATE_CHARGING
+                ):
                     self.commands[trans.command] = True
 
             # check for other command dependency on animation and start charging (or reset state)
@@ -271,6 +320,7 @@ class AIBrain(AnimationLinkedBrain):
     The brain will take care of avoiding cliffs, but other than that always just walk from left to right and back.
     Overwrite this to implement more complex behaviors in the tick method.
     """
+
     def __init__(self, name="brain", commands=None):
         if not commands:
             commands = ["left", "right"]
@@ -294,12 +344,19 @@ class AIBrain(AnimationLinkedBrain):
 
         self.reset()
 
-        if self.game_obj_cmp_anim and self.game_obj_cmp_anim.flags & Animation.get_flag("paralyzes"):
+        if (
+            self.game_obj_cmp_anim
+            and self.game_obj_cmp_anim.flags & Animation.get_flag("paralyzes")
+        ):
             return
 
         # look for edges ahead -> then change direction if one is detected
         # - makes sure an enemy character does not fall off a cliff
-        if (not (game_loop.frame % 3) and self.check_cliff_ahead()) or obj.rect.x <= 0 or obj.rect.x >= obj.x_max:
+        if (
+            (not (game_loop.frame % 3) and self.check_cliff_ahead())
+            or obj.rect.x <= 0
+            or obj.rect.x >= obj.x_max
+        ):
             self.toggle_direction()
 
         self.commands["left" if self.flipped else "right"] = True
@@ -325,11 +382,14 @@ class AIBrain(AnimationLinkedBrain):
         # ccc
         #  _
         w = max(tile_w * 1.5, obj.rect.width - 6)
-        col = obj.stage.locate((obj.rect.right - tile_w - w) if self.flipped else (obj.rect.left + tile_w),
-                               obj.rect.bottom - tile_h * 0.5,
-                               w,
-                               tile_h * 1.75,
-                               Sprite.get_type("default"))
+        col = obj.stage.locate(
+            (obj.rect.right - tile_w - w) if self.flipped else (obj.rect.left + tile_w),
+            obj.rect.bottom - tile_h * 0.5,
+            w,
+            tile_h * 1.75,
+            Sprite.get_type("default"),
+        )
+        from spygame.examples.liquid_body import LiquidBody
         if not col or isinstance(col.sprite2, LiquidBody):
             return True
         return False

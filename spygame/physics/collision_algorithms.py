@@ -8,7 +8,9 @@ class Collision(object):
     """
 
     def __init__(self):
-        self.sprite1 = None  # hook into the first Sprite participating in this collision
+        self.sprite1 = (
+            None  # hook into the first Sprite participating in this collision
+        )
         self.sprite2 = None  # hook into the second Sprite participating in this collision (this could be a TileSprite)
         self.is_collided = True  # True if a collision happened (usually True)
         self.distance = 0  # how much do we have to move sprite1 to separate the two Sprites? (always negative)
@@ -16,10 +18,16 @@ class Collision(object):
         self.impact = 0.0  # NOT SURE: the impulse of the collision on some mass (used for pushing heavy objects)
         self.normal_x = 0.0  # x-component of the collision normal
         self.normal_y = 0.0  # y-component of the collision normal
-        self.separate = [0, 0]  # (-distance * normal_x, -distance * normal_y) how much to we have to change x/y values for rect to separate the two sprites
+        self.separate = [
+            0,
+            0,
+        ]  # (-distance * normal_x, -distance * normal_y) how much to we have to change x/y values for rect to separate the two sprites
         self.direction = None  # None, 'x' or 'y' (direction in which we measure the collision; the other direction is ignored)
         self.direction_veloc = 0  # velocity direction component (e.g. direction=='x' veloc==5 -> moving right, veloc==-10.4 -> moving left)
-        self.original_pos = [0, 0]  # the original x/y-position of sprite1 before the move that lead to the collision happened
+        self.original_pos = [
+            0,
+            0,
+        ]  # the original x/y-position of sprite1 before the move that lead to the collision happened
 
     def invert(self):
         """
@@ -42,6 +50,7 @@ class CollisionAlgorithm(object):
     """
     A static class that is used to store a collision algorithm.
     """
+
     # the default collision objects
     # - can be overridden via the collide method
     default_collision_objects = (Collision(), Collision())
@@ -73,22 +82,31 @@ class AABBCollision(CollisionAlgorithm):
     """
 
     @staticmethod
-    def collide(sprite1, sprite2, collision_objects=None, direction='x', direction_veloc=0.0, original_pos=None):
+    def collide(
+        sprite1,
+        sprite2,
+        collision_objects=None,
+        direction="x",
+        direction_veloc=0.0,
+        original_pos=None,
+    ):
         # TODO: actually, we only need one collision object as we should always only resolve one object at a time
 
         # TODO: utilize direction veloc information to only return the smallest separation collision
 
         # direction must be given AND direction_veloc must not be 0.0
-        #assert direction == "x" or direction == "y", "ERROR: in AABB collision between {} and {}: direction needs to be either 'x' or 'y'!". \
+        # assert direction == "x" or direction == "y", "ERROR: in AABB collision between {} and {}: direction needs to be either 'x' or 'y'!". \
         #    format(type(sprite1).__name__, type(sprite2).__name__)
-        #assert direction_veloc != 0.0, "ERROR in AABB collision between {} and {}: direction_veloc must not be 0.0!".\
+        # assert direction_veloc != 0.0, "ERROR in AABB collision between {} and {}: direction_veloc must not be 0.0!".\
         #    format(type(sprite1).__name__, type(sprite2).__name__)
 
         # use default CollisionObjects?
         if not collision_objects:
             collision_objects = AABBCollision.default_collision_objects
 
-        ret = AABBCollision.try_collide(sprite1, sprite2, collision_objects[0], direction, direction_veloc)
+        ret = AABBCollision.try_collide(
+            sprite1, sprite2, collision_objects[0], direction, direction_veloc
+        )
         if not ret:
             return None
 
@@ -96,8 +114,8 @@ class AABBCollision(CollisionAlgorithm):
             return None
 
         # fill in some more values in the recycled Collision object before returning it
-        ret.separate[0] = - ret.distance * ret.normal_x
-        ret.separate[1] = - ret.distance * ret.normal_y
+        ret.separate[0] = -ret.distance * ret.normal_x
+        ret.separate[1] = -ret.distance * ret.normal_y
         if not original_pos:
             original_pos = (sprite1.rect.x, sprite1.rect.y)
         ret.original_pos = original_pos
@@ -126,7 +144,12 @@ class AABBCollision(CollisionAlgorithm):
         collision_obj.direction_veloc = direction_veloc
 
         # overlap?
-        if o1.rect.right > o2.rect.left and o1.rect.left < o2.rect.right and o1.rect.bottom > o2.rect.top and o1.rect.top < o2.rect.bottom:
+        if (
+            o1.rect.right > o2.rect.left
+            and o1.rect.left < o2.rect.right
+            and o1.rect.bottom > o2.rect.top
+            and o1.rect.top < o2.rect.bottom
+        ):
             collision_obj.sprite1 = o1
             collision_obj.sprite2 = o2
             collision_obj.is_collided = True
@@ -162,8 +185,12 @@ class SATCollision(CollisionAlgorithm):
 
         # do AABB first for a likely early out
         # TODO: right now, we only have pygame.Rect anyway, so these are AABBs
-        if (sprite1.rect.right < sprite2.rect.left or sprite1.rect.bottom < sprite2.rect.top or
-                    sprite2.rect.right < sprite1.rect.left or sprite2.rect.right < sprite1.rect.left):
+        if (
+            sprite1.rect.right < sprite2.rect.left
+            or sprite1.rect.bottom < sprite2.rect.top
+            or sprite2.rect.right < sprite1.rect.left
+            or sprite2.rect.right < sprite1.rect.left
+        ):
             return None
 
         test = SATCollision.try_collide(sprite1, sprite2, collision_objects[0], False)
@@ -175,14 +202,18 @@ class SATCollision(CollisionAlgorithm):
             return None
 
         # pick the best collision from the two
-        ret = collision_objects[1] if collision_objects[1].magnitude < collision_objects[0].magnitude else collision_objects[0]
+        ret = (
+            collision_objects[1]
+            if collision_objects[1].magnitude < collision_objects[0].magnitude
+            else collision_objects[0]
+        )
 
         if not ret.is_collided:
             return None
 
         # fill in some more values in the recycled Collision object before returning it
-        ret.separate[0] = - ret.distance * ret.normal_x
-        ret.separate[1] = - ret.distance * ret.normal_y
+        ret.separate[0] = -ret.distance * ret.normal_x
+        ret.separate[1] = -ret.distance * ret.normal_y
         if not original_pos:
             original_pos = (sprite1.rect.x, sprite1.rect.y)
         ret.original_pos = original_pos
@@ -212,11 +243,19 @@ class SATCollision(CollisionAlgorithm):
         collision_obj.is_collided = False
 
         # the following only works for AABBs, we will have to change that once objects start rotating or being non-rects
-        p1 = [[o1.rect.x, o1.rect.y], [o1.rect.x + o1.rect.width, o1.rect.y],
-              [o1.rect.x + o1.rect.width, o1.rect.y + o1.rect.height], [o1.rect.x, o1.rect.y + o1.rect.height]]
+        p1 = [
+            [o1.rect.x, o1.rect.y],
+            [o1.rect.x + o1.rect.width, o1.rect.y],
+            [o1.rect.x + o1.rect.width, o1.rect.y + o1.rect.height],
+            [o1.rect.x, o1.rect.y + o1.rect.height],
+        ]
 
-        p2 = [[o2.rect.x, o2.rect.y], [o2.rect.x + o2.rect.width, o2.rect.y],
-              [o2.rect.x + o2.rect.width, o2.rect.y + o2.rect.height], [o2.rect.x, o2.rect.y + o2.rect.height]]
+        p2 = [
+            [o2.rect.x, o2.rect.y],
+            [o2.rect.x + o2.rect.width, o2.rect.y],
+            [o2.rect.x + o2.rect.width, o2.rect.y + o2.rect.height],
+            [o2.rect.x, o2.rect.y + o2.rect.height],
+        ]
 
         # loop through all axes of sprite1
         for i in range(len(p1)):

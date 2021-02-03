@@ -9,25 +9,38 @@ class Dockable(Component):
     """
 
     DEFINITELY_DOCKED = 0x1  # this object is definitely docked to something right now
-    DEFINITELY_NOT_DOCKED = 0x2  # this object is definitely not docked to something right now
-    TO_BE_DETERMINED = 0x4  # the docking state of this object is currently being determined
-    PREVIOUSLY_DOCKED = 0x8  # if set, the object was docked to something in the previous frame
+    DEFINITELY_NOT_DOCKED = (
+        0x2  # this object is definitely not docked to something right now
+    )
+    TO_BE_DETERMINED = (
+        0x4  # the docking state of this object is currently being determined
+    )
+    PREVIOUSLY_DOCKED = (
+        0x8  # if set, the object was docked to something in the previous frame
+    )
 
     def __init__(self, name="dockable"):
         """
         :param str name: the name of the Component
         """
         super().__init__(name)
-        self.docked_sprites = set()  # set that holds all Sprites (by GameObject id) currently docked to this one
+        self.docked_sprites = (
+            set()
+        )  # set that holds all Sprites (by GameObject id) currently docked to this one
         # holds the objects that we stand on and stood on previously:
         # slot 0=current state; slot 1=previous state (sometimes we need the previous state since the current state gets reset to 0 every step)
         self.docking_state = 0
-        self.docked_to = None  # the reference to the object that we are currently docked to
+        self.docked_to = (
+            None  # the reference to the object that we are currently docked to
+        )
 
     def added(self):
         # make sure our GameObject is a Sprite
-        assert isinstance(self.game_object, Sprite), "ERROR: game_object of Component Dockable must be of type Sprite (not {})!". \
-            format(type(self.game_object).__name__)
+        assert isinstance(
+            self.game_object, Sprite
+        ), "ERROR: game_object of Component Dockable must be of type Sprite (not {})!".format(
+            type(self.game_object).__name__
+        )
         # extend our GameObject with move (thereby overriding the Sprite's move method)
         self.extend(self.move)
 
@@ -74,7 +87,7 @@ class Dockable(Component):
             self.docked_to = mother_ship
             # add docked obj to mothership docked-obj-list (if present)
             if "dockable" in mother_ship.components:
-                #print("adding {} (id {}) to mothership {}".format(type(obj).__name__, obj.id, type(self.docked_to).__name__))
+                # print("adding {} (id {}) to mothership {}".format(type(obj).__name__, obj.id, type(self.docked_to).__name__))
                 mother_ship.components["dockable"].docked_sprites.add(obj)
 
     def undock(self):
@@ -88,7 +101,7 @@ class Dockable(Component):
             self.docking_state |= Dockable.PREVIOUSLY_DOCKED
         # remove docked obj from mothership docked-obj-list (if present)
         if self.docked_to and "dockable" in self.docked_to.components:
-            #print("removing {} (id {}) from mothership {}".format(type(obj).__name__, obj.id, type(self.docked_to).__name__))
+            # print("removing {} (id {}) from mothership {}".format(type(obj).__name__, obj.id, type(self.docked_to).__name__))
             self.docked_to.components["dockable"].docked_sprites.discard(obj)
         self.docked_to = None
 
@@ -115,8 +128,13 @@ class Dockable(Component):
         :return: True if the current state is definitely docked OR (to-be-determined AND previous state was docked)
         :rtype: bool
         """
-        return bool(self.docking_state & Dockable.DEFINITELY_DOCKED or
-                    (self.docking_state & Dockable.TO_BE_DETERMINED and self.docking_state & Dockable.PREVIOUSLY_DOCKED))
+        return bool(
+            self.docking_state & Dockable.DEFINITELY_DOCKED
+            or (
+                self.docking_state & Dockable.TO_BE_DETERMINED
+                and self.docking_state & Dockable.PREVIOUSLY_DOCKED
+            )
+        )
 
     def state_unsure(self):
         """

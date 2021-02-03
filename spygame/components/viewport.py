@@ -3,24 +3,30 @@ from spygame.components.component import Component
 
 class Viewport(Component):
     """
-    A viewport is a component that can be added to a Stage to help that Stage render the scene depending on scrolling/obj_to_follow certain GameObjects
-    - any GameObject with offset_x/y fields is supported, the Viewport will set these offsets to the Viewports x/y values
-    before each render call
+    A viewport is a component that can be added to a Stage to help that Stage render
+    the scene depending on scrolling/obj_to_follow certain GameObjects.
+    Any GameObject with offset_x/y fields is supported, the Viewport will set these
+    offsets to the Viewports x/y values before each render call.
     """
+
     def __init__(self, display):
         """
         :param Display display: the Display object associated with this Viewport
         """
-        super().__init__("viewport")  # fix name to 'viewport' (only one viewport per Stage)
+        # Fix name to 'viewport' (only one viewport per Stage).
+        super().__init__("viewport")
 
-        self.display = display  # the pygame display (Surface) to draw on; so far we only need it to get the display's dimensions
+        # The pygame display (Surface) to draw on; so far we only need it to get the
+        # display's dimensions.
+        self.display = display
 
-        # top/left corner (world coordinates) of the Viewport window
-        # - will be used as offset_x/y for the Display
+        # Top/left corner (world coordinates) of the Viewport window.
+        # Will be used as offset_x/y for the Display.
         self.x = 0
         self.y = 0
 
-        # parameters used for shaking the Viewport (if something heavy lands on the ground)
+        # Parameters used for shaking the Viewport (if something heavy lands on the
+        # ground).
         self.is_shaking = False
         self.shake_y = 0  # the current shake-y-offset
         self.shake_time_total = 0
@@ -35,8 +41,11 @@ class Viewport(Component):
         self.bounding_box = None
 
     def added(self):
-        assert isinstance(self.game_object, Stage), "ERROR: Viewport Component can only be added to a Stage, but game_objects is of type {}!".\
-            format(type(self.game_object).__name__)
+        assert isinstance(
+            self.game_object, Stage
+        ), "ERROR: Viewport Component can only be added to a Stage, but game_objects is of type {}!".format(
+            type(self.game_object).__name__
+        )
         self.game_object.on_event("pre_render", self, "pre_render")
 
         self.extend(self.follow_object_with_viewport)
@@ -46,7 +55,14 @@ class Viewport(Component):
         self.extend(self.shake_viewport)
 
     # EXTENSION methods (take self as well as GameObject as first two params)
-    def follow_object_with_viewport(self, stage, obj_to_follow, directions=None, bounding_box=None, max_speed=float("inf")):
+    def follow_object_with_viewport(
+        self,
+        stage,
+        obj_to_follow,
+        directions=None,
+        bounding_box=None,
+        max_speed=float("inf"),
+    ):
         """
         Makes the viewport follow a GameObject (obj_to_follow).
 
@@ -64,8 +80,16 @@ class Viewport(Component):
         # - if we don't have a Level (just a Screen), use the display's size
         if not bounding_box:  # get a default bounding box
             # TODO: this is very specific to us having always a Stage (with options['screen_obj']) as our owning stage
-            w = self.game_object.screen.width if hasattr(self.game_object.screen, "width") else self.display.surface.get_width()
-            h = self.game_object.screen.height if hasattr(self.game_object.screen, "height") else self.display.surface.get_height()
+            w = (
+                self.game_object.screen.width
+                if hasattr(self.game_object.screen, "width")
+                else self.display.surface.get_width()
+            )
+            h = (
+                self.game_object.screen.height
+                if hasattr(self.game_object.screen, "height")
+                else self.display.surface.get_height()
+            )
             bounding_box = {"min_x": 0, "min_y": 0, "max_x": w, "max_y": h}
 
         self.directions = directions
@@ -116,7 +140,10 @@ class Viewport(Component):
         self.is_shaking = True
         self.shake_time_total = time
         self.shake_frequency = frequency
-        self.shake_time_switch = 1 / (frequency * 2)  # after this time, we have to switch direction (2 b/c up and down)
+        self.shake_time_switch = 1 / (
+            frequency * 2
+        )  # after this time, we have to switch direction (2 b/c up and down)
+
     # END: EXTENSION METHODS
 
     def follow(self, game_loop=None, first=False):
@@ -127,11 +154,22 @@ class Viewport(Component):
         :param GameLoop game_loop: the GameLoop that's currently playing
         :param bool first: whether this is the very first call to this function (if so, do a hard center on, otherwise a soft-center-on)
         """
-        follow_x = self.directions["x"](self.obj_to_follow) if callable(self.directions["x"]) else self.directions["x"]
-        follow_y = self.directions["y"](self.obj_to_follow) if callable(self.directions["y"]) else self.directions["y"]
+        follow_x = (
+            self.directions["x"](self.obj_to_follow)
+            if callable(self.directions["x"])
+            else self.directions["x"]
+        )
+        follow_y = (
+            self.directions["y"](self.obj_to_follow)
+            if callable(self.directions["y"])
+            else self.directions["y"]
+        )
 
         func = self.center_on if first else self.soft_center_on
-        func(self.obj_to_follow.rect.centerx if follow_x else None, self.obj_to_follow.rect.centery if follow_y else None)
+        func(
+            self.obj_to_follow.rect.centerx if follow_x else None,
+            self.obj_to_follow.rect.centery if follow_y else None,
+        )
 
     def soft_center_on(self, x=None, y=None):
         """
@@ -141,15 +179,22 @@ class Viewport(Component):
         :param Union[int,None] y: the y position to center on (None if we should ignore the y position)
         """
         if x:
-            dx = (x - self.display.width / 2 / self.scale - self.x) / 3  # //, this.followMaxSpeed);
+            dx = (
+                x - self.display.width / 2 / self.scale - self.x
+            ) / 3  # //, this.followMaxSpeed);
             if abs(dx) > self.max_speed:
                 dx = math.copysign(self.max_speed, dx)
 
             if self.bounding_box:
                 if (self.x + dx) < self.bounding_box["min_x"]:
                     self.x = self.bounding_box["min_x"] / self.scale
-                elif self.x + dx > (self.bounding_box["max_x"] - self.display.width) / self.scale:
-                    self.x = (self.bounding_box["max_x"] - self.display.width) / self.scale
+                elif (
+                    self.x + dx
+                    > (self.bounding_box["max_x"] - self.display.width) / self.scale
+                ):
+                    self.x = (
+                        self.bounding_box["max_x"] - self.display.width
+                    ) / self.scale
                 else:
                     self.x += dx
             else:
@@ -162,8 +207,13 @@ class Viewport(Component):
             if self.bounding_box:
                 if self.y + dy < self.bounding_box["min_y"]:
                     self.y = self.bounding_box["min_y"] / self.scale
-                elif self.y + dy > (self.bounding_box["max_y"] - self.display.height) / self.scale:
-                    self.y = (self.bounding_box["max_y"] - self.display.height) / self.scale
+                elif (
+                    self.y + dy
+                    > (self.bounding_box["max_y"] - self.display.height) / self.scale
+                ):
+                    self.y = (
+                        self.bounding_box["max_y"] - self.display.height
+                    ) / self.scale
                 else:
                     self.y += dy
             else:
@@ -208,4 +258,3 @@ class Viewport(Component):
         """
         self.display.offsets[0] = self.x
         self.display.offsets[1] = self.y
-

@@ -7,6 +7,7 @@ class GameObject(EventObject):
     (e.g. animation, physics, etc..).
     Component objects are stored by their name in the GameObject.components dict.
     """
+
     # stores all GameObjects by a unique int ID
     id_to_obj = {}
     next_id = 0
@@ -34,7 +35,11 @@ class GameObject(EventObject):
         """
 
         component.game_object = self
-        assert component.name not in self.components, "ERROR: component with name {} already exists in Entity!".format(component.name)
+        assert (
+            component.name not in self.components
+        ), "ERROR: component with name {} already exists in Entity!".format(
+            component.name
+        )
         self.components[component.name] = component
         component.added()
         return component
@@ -45,7 +50,11 @@ class GameObject(EventObject):
 
         :param Component component: the Component object to be removed
         """
-        assert component.name in self.components, "ERROR: component with name {} does no exist in Entity!".format(component.name)
+        assert (
+            component.name in self.components
+        ), "ERROR: component with name {} does no exist in Entity!".format(
+            component.name
+        )
         # call the removed handler (if implemented)
         component.removed()
         # only then erase the component from the GameObject

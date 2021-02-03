@@ -14,11 +14,11 @@ class Animation(Component):
 
     # some flags
     animation_flags = {
-        "none":   0x0,
+        "none": 0x0,
         # if set: this animation does not change the Sprite's image depending on time, but they have to be set manually via the
         # frame property of the Animation component (which gives the SpriteSheet's frame, not the anim_settings frame-slot)
         "manual": 0x1,
-        "all":    0xffff,
+        "all": 0xffff,
     }
     next_flag = 0x2
 
@@ -44,32 +44,49 @@ class Animation(Component):
     def register_settings(settings_name, settings, register_events_on=None):
         # we do not have this name registered yet
         if settings_name not in Animation.animation_settings:
-            assert "default" in settings, "ERROR: no entry `default` in animation-settings. Each settings block needs a default animation name."
+            assert (
+                "default" in settings
+            ), "ERROR: no entry `default` in animation-settings. Each settings block needs a default animation name."
             for anim in settings:
                 if anim != "default":
-                    defaults(settings[anim], {
-                        "rate":          1 / 3,  # the rate with which to play this animation in 1/s
-                        "frames":        [0, 1],  # the frames to play from our spritesheet (starts with 0)
-                        "priority":      0,  # which priority to use for next if next is given
-                        # flags bitmap that determines the behavior of the animation (e.g. block controls during animation play, etc..)
-                        "flags":         0,
-                        "callbacks":     None,
-                        "loop":          True,  # whether to loop the animation when done
-                        "next":          None,  # which animation to play next (str or callable returning a str)
-                        "next_priority": 0,  # which priority to use for next if next is given
-                        "trigger":       None,  # which events to trigger on the game_object that plays this animation
-                        "trigger_data":  [],  # *args data to pass to the event handler if trigger is given
-                        "properties":    {},    # some custom properties of this anim
-                    })
+                    defaults(
+                        settings[anim],
+                        {
+                            "rate": 1
+                            / 3,  # the rate with which to play this animation in 1/s
+                            "frames": [
+                                0,
+                                1,
+                            ],  # the frames to play from our spritesheet (starts with 0)
+                            "priority": 0,  # which priority to use for next if next is given
+                            # flags bitmap that determines the behavior of the animation (e.g. block controls during animation play, etc..)
+                            "flags": 0,
+                            "callbacks": None,
+                            "loop": True,  # whether to loop the animation when done
+                            "next": None,  # which animation to play next (str or callable returning a str)
+                            "next_priority": 0,  # which priority to use for next if next is given
+                            "trigger": None,  # which events to trigger on the game_object that plays this animation
+                            "trigger_data": [],  # *args data to pass to the event handler if trigger is given
+                            "properties": {},  # some custom properties of this anim
+                        },
+                    )
             Animation.animation_settings[settings_name] = settings
 
         if isinstance(register_events_on, EventObject):
-            l = list(chain.from_iterable(("anim." + anim, "anim_loop." + anim, "anim_end." + anim) for anim in settings))
+            l = list(
+                chain.from_iterable(
+                    ("anim." + anim, "anim_loop." + anim, "anim_end." + anim)
+                    for anim in settings
+                )
+            )
             register_events_on.register_event(*l)
 
     @staticmethod
     def get_settings(spritesheet_name, anim_setting):
-        if spritesheet_name not in Animation.animation_settings or anim_setting not in Animation.animation_settings[spritesheet_name]:
+        if (
+            spritesheet_name not in Animation.animation_settings
+            or anim_setting not in Animation.animation_settings[spritesheet_name]
+        ):
             return None
         return Animation.animation_settings[spritesheet_name][anim_setting]
 
@@ -78,7 +95,9 @@ class Animation(Component):
         self.animation = None  # str: we are playing this animation; None: we are undefined -> waiting for the next anim setup
         self.rate = 1 / 3  # default rate in s
         self.has_changed = False
-        self.priority = -1  # animation priority (takes the value of the highest priority animation that wants to be played simultaneously)
+        self.priority = (
+            -1
+        )  # animation priority (takes the value of the highest priority animation that wants to be played simultaneously)
         self.frame = 0  # the current frame in the animation 'frames' list OR: if self.animation is None: this is the actual frame from the SpriteSheet
         self.time = 0  # the current time after starting the animation in s
         self.flags = 0
@@ -90,10 +109,14 @@ class Animation(Component):
 
     def added(self):
         # make sure our GameObject is actually a Sprite
-        assert isinstance(self.game_object, Sprite), "ERROR: Component Animation can only be added to a Sprite object!"
+        assert isinstance(
+            self.game_object, Sprite
+        ), "ERROR: Component Animation can only be added to a Sprite object!"
 
         # tell our GameObject that we might trigger some "anim..." events on it
-        self.game_object.register_event("anim.start", "anim.frame", "anim.loop", "anim.end")
+        self.game_object.register_event(
+            "anim.start", "anim.frame", "anim.loop", "anim.end"
+        )
 
         # extend some methods directly onto the GameObject
         self.extend(self.play_animation)
@@ -121,7 +144,9 @@ class Animation(Component):
         # animation stuff?
         anim_settings = None
         if self.animation and not self.flags & Animation.get_flag("manual"):
-            anim_settings = Animation.get_settings(obj.anim_settings_name, self.animation)
+            anim_settings = Animation.get_settings(
+                obj.anim_settings_name, self.animation
+            )
             rate = anim_settings["rate"] or self.rate
             stepped = 0
             self.time += game_loop.dt
@@ -143,12 +168,21 @@ class Animation(Component):
                         obj.trigger_event("anim.end", self)
                         self.priority = -1
                         if anim_settings["trigger"]:
-                            obj.trigger_event(anim_settings["trigger"], *anim_settings["trigger_data"])
+                            obj.trigger_event(
+                                anim_settings["trigger"], *anim_settings["trigger_data"]
+                            )
                         # `next` could be a callable as well returning a str to use as animation setting
                         if anim_settings["next"]:
-                            #print("playing next animation {}\n".format(anim_settings["next"]))
-                            self.play_animation(obj, (anim_settings["next"]() if callable(anim_settings["next"]) else anim_settings["next"]),
-                                                anim_settings["next_priority"])
+                            # print("playing next animation {}\n".format(anim_settings["next"]))
+                            self.play_animation(
+                                obj,
+                                (
+                                    anim_settings["next"]()
+                                    if callable(anim_settings["next"])
+                                    else anim_settings["next"]
+                                ),
+                                anim_settings["next_priority"],
+                            )
                         return
                     # this animation loops
                     else:
@@ -179,10 +213,18 @@ class Animation(Component):
                 # TEST DEBUG
                 frm = int(self.frame)
                 if frm >= len(anim_settings["frames"]):
-                    print("BAD: anim='{}' frm {} >= len(anim_settings[frames]) {}!\n".format(self.animation, frm, len(anim_settings["frames"])))
+                    print(
+                        "BAD: anim='{}' frm {} >= len(anim_settings[frames]) {}!\n".format(
+                            self.animation, frm, len(anim_settings["frames"])
+                        )
+                    )
                 tile = anim_settings["frames"][frm]
                 if tile >= len(tiles_dict):
-                    print("BAD: anim='{}' tile {} >= len(tiles_dict) {}!\n".format(self.animation, tile, len(tiles_dict)))
+                    print(
+                        "BAD: anim='{}' tile {} >= len(tiles_dict) {}!\n".format(
+                            self.animation, tile, len(tiles_dict)
+                        )
+                    )
                 obj.image = tiles_dict[tile]
 
     def play_animation(self, game_object, name, priority=0):
@@ -197,7 +239,11 @@ class Animation(Component):
         if name and name != self.animation:
             # look up animation in list
             anim_settings = Animation.get_settings(game_object.anim_settings_name, name)
-            assert anim_settings, "ERROR: animation-to-play (`{}`) not found in spritesheet settings `{}`!".format(name, game_object.anim_settings_name)
+            assert (
+                anim_settings
+            ), "ERROR: animation-to-play (`{}`) not found in spritesheet settings `{}`!".format(
+                name, game_object.anim_settings_name
+            )
 
             priority = priority or anim_settings["priority"]
             if priority >= self.priority:

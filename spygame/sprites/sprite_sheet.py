@@ -1,6 +1,7 @@
 import os
 import pygame
 import xml
+import xml.etree.ElementTree
 
 
 class SpriteSheet(object):
@@ -26,7 +27,11 @@ class SpriteSheet(object):
         self.name = props["name"]
         self.tw = int(props["tilewidth"])
         self.th = int(props["tileheight"])
-        assert "tilecount" in props, "ERROR: no `tilecount` property in properties of tsx file: `{}`!".format(file)
+        assert (
+            "tilecount" in props
+        ), "ERROR: no `tilecount` property in properties of tsx file: `{}`!".format(
+            file
+        )
         self.count = int(props["tilecount"])
         self.cols = int(props["columns"])
         self.tiles = []  # the list of all Surfaces
@@ -34,7 +39,9 @@ class SpriteSheet(object):
         self.tiles_flipped_y = []  # the list of all Surfaces (flipped on y-axis)
         self.tiles_flipped_xy = []  # the list of all Surfaces (flipped on both axes)
 
-        self.tile_props_by_id = {}  # contains tile properties set in the tmx file for each tile by tile ID
+        self.tile_props_by_id = (
+            {}
+        )  # contains tile properties set in the tmx file for each tile by tile ID
 
         # by default, only flip on x-axis (usually that's enough for 2D games)
         if not store_flips:
@@ -46,7 +53,12 @@ class SpriteSheet(object):
                 props = child.attrib
                 self.w = int(props["width"])
                 self.h = int(props["height"])
-                image_file = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(file)), os.path.relpath(props["source"])))
+                image_file = os.path.normpath(
+                    os.path.join(
+                        os.path.dirname(os.path.abspath(file)),
+                        os.path.relpath(props["source"]),
+                    )
+                )
                 # image_file = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(file)), os.path.relpath("../images/debug.png")))
                 image = pygame.image.load(image_file).convert_alpha()
                 col = -1
@@ -57,17 +69,26 @@ class SpriteSheet(object):
                         col = 0
                         row += 1
                     surf = pygame.Surface((self.tw, self.th), flags=pygame.SRCALPHA)
-                    surf.blit(image, (0, 0),
-                              area=pygame.Rect(col * self.tw, row * self.th, self.tw, self.th))  # blits the correct frame of the image to this new surface
+                    surf.blit(
+                        image,
+                        (0, 0),
+                        area=pygame.Rect(
+                            col * self.tw, row * self.th, self.tw, self.th
+                        ),
+                    )  # blits the correct frame of the image to this new surface
                     self.tiles.append(surf)
                     # do the necessary flippings (will save time later when rendering the Sprite)
                     if store_flips["x"]:
                         surf_x_flipped = pygame.transform.flip(surf, True, False)
                         self.tiles_flipped_x.append(surf_x_flipped)
                         if store_flips["y"]:  # x and y
-                            self.tiles_flipped_xy.append(pygame.transform.flip(surf_x_flipped, False, True))
+                            self.tiles_flipped_xy.append(
+                                pygame.transform.flip(surf_x_flipped, False, True)
+                            )
                     if store_flips["y"]:
-                        self.tiles_flipped_y.append(pygame.transform.flip(surf, False, True))
+                        self.tiles_flipped_y.append(
+                            pygame.transform.flip(surf, False, True)
+                        )
 
             # single tiles (and their properties)
             elif child.tag == "tile":
@@ -78,14 +99,24 @@ class SpriteSheet(object):
                     if tag.tag == "properties":
                         for prop in tag:
                             val = prop.attrib["value"]
-                            type_ = prop.attrib["type"] if "type" in prop.attrib else None
+                            type_ = (
+                                prop.attrib["type"] if "type" in prop.attrib else None
+                            )
                             if type_:
                                 if type_ == "bool":
                                     val = True if val == "true" else False
                                 else:
-                                    val = int(val) if type_ == "int" else float(val) if type_ == "float" else val
+                                    val = (
+                                        int(val)
+                                        if type_ == "int"
+                                        else float(val)
+                                        if type_ == "float"
+                                        else val
+                                    )
                             self.tile_props_by_id[id_][prop.attrib["name"]] = val
                     else:
-                        raise ("ERROR: expected only <properties> tag within <tile> in tsx file {}".format(file))
-
-
+                        raise (
+                            "ERROR: expected only <properties> tag within <tile> in tsx file {}".format(
+                                file
+                            )
+                        )

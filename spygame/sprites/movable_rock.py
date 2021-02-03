@@ -1,5 +1,6 @@
 from spygame.sprites.sprite import Sprite
-from spygame.physics.platform_physics import PlatformPhysics
+from spygame.physics.platformer_physics import PlatformPhysics
+
 
 class MovableRock(Sprite):
     def __init__(self, x, y, **kwargs):
@@ -12,7 +13,7 @@ class MovableRock(Sprite):
 
         # add Physics (and thus Dockable) components to this Rock
         # - pre-tick: Physics (movement + collision resolution)
-        #self.register_event("collision")
+        # self.register_event("collision")
 
         phys = PlatformerPhysics("physics")
         phys.is_pushable = True  # rock can be pushed by an agent
@@ -30,4 +31,3 @@ class MovableRock(Sprite):
 
     def land(self, *args):
         self.stage.shake_viewport(1, 10)
-
