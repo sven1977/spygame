@@ -9,8 +9,8 @@
 
 import pygame
 
-VERSION_ = "0.1"
-RELEASE_ = "0.1a9"
+VERSION_ = "0.2"
+RELEASE_ = "0.2a0"
 
 # Some debug flags that we can set to switch on debug rendering, collision
 # handling, etc..
